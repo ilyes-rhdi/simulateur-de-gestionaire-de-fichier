@@ -60,7 +60,10 @@ typedef struct {
 } EnteteFichierTOV;
 
 
-
+typedef struct {
+    Bloc* adresbloc;
+    int isfull;
+}bloc001;
 //Structure te3 buffer de transmission
 typedef struct {
     //c un tableau de caracteres used pour stocker temporairement des donnees a transmettre
@@ -83,19 +86,20 @@ typedef struct
 
 
 typedef enum {
-    Global,
-    Interne
+    Trie,
+    NoTrie
 }ModeOrganisationE;
 
 //cette structure represente le fichier TOV
 typedef struct {
     EnteteFichierTOV entete;
     char nomFichier[256];  // Nom du fichier, modifiable à tout moment
-    ModeOrganisationE mode; 
+    ModeOrganisationE mode;
+    ModeOrganisationF sort;  
     //c un pointeur vers un tableau d'enregistrements physiques , ce tableau stocke les enregistrements individuels contenus dans le fichier TOV
     EnregistrementPhysique *enregistrements;
     HashTable *table;
-    Bloc **blocs;           // Tableau de blocs pour la gestion de la mémoire
+    Bloc *blocs;     // Tableau de blocs pour la gestion de la mémoire
     int nbBlocs;  // taille en blocs
 } FichierTOV;
 

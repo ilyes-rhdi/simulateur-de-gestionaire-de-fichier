@@ -3,8 +3,6 @@
 /*                                                            *  DONE  BY ilyes  *                                                        */
 
 
-
-
 // utiliser le buffer pour gerer le tampon de transmission avec ces 2 fonctions   (checked)
 void remplirBuffer(BufferTransmission *buffer, const char *data)
 {
@@ -28,26 +26,6 @@ void viderBuffer(BufferTransmission *buffer)
     buffer->taille = 0;
 }
 
-// une fonction pas demandee , j vais l'utiliser juste pour calculer la taille des diff enregistrements
-unsigned long CalculerTailleEnregistrement(const EnregistrementPhysique *enregistrement)
-{
-    if (enregistrement == NULL)
-        return 0;
-
-    return sizeof(EnteteEnregistrement) + strlen(enregistrement->data1);
-}
-Bloc *trouverBlocAvecEspace(FichierTOV *fichier, size_t tailleEnregistrement) {
-    for (int i = 0; i < fichier->nbBlocs; i++) {
-        if (fichier->blocs[i].capacite - fichier->blocs[i].taille >= tailleEnregistrement) {
-            return &fichier->blocs[i];
-        }
-    }
-    return NULL; // Aucun bloc avec assez d'espace
-}
-
 // utiliser les fonctions dans main
 #include "tov.h"
 
-
-// utiliser les fonctions dans main
-#include "tov.h"
