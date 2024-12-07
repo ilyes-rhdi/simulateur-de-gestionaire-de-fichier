@@ -6,8 +6,8 @@
 #include <unistd.h>
 
 // Initialisation du fichierTOV
-FichierTOV *initialiserFichierTOV(int capaciteMax, const char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
-    FichierTOV *fichier = malloc(sizeof(FichierTOV));
+Fichier *initialiserFichierTOV(int capaciteMax, const char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
+    Fichier *fichier = malloc(sizeof(Fichier));
     if (fichier == NULL) {
         fprintf(stderr, "Erreur : Allocation mémoire échouée pour le fichier.\n");
         return NULL;
@@ -18,7 +18,8 @@ FichierTOV *initialiserFichierTOV(int capaciteMax, const char *nom, ModeOrganisa
     fichier->nomFichier[sizeof(fichier->nomFichier) - 1] = '\0';
     fichier->mode = mode;
     fichier->sort = sort;
-    fichier->nbBlocs = (capaciteMax * TAILLE_MAX_BLOC) / TAILLE_MAX_ENREGISTREMENT + 1;
+    fichier->nbBlocs = 0;
+    fichier->max_bloc=(capaciteMax*TAILLE_MAX_ENREGISTREMENT)/TAILLE_MAX_BLOC + 1;
     fichier->entete.nbEnregistrements = 0;
     fichier->entete.capaciteMax = capaciteMax;
     fichier->entete.nextID = 0;
@@ -39,7 +40,7 @@ FichierTOV *initialiserFichierTOV(int capaciteMax, const char *nom, ModeOrganisa
 }
 
 // Libération de la mémoire du fichier TOV
-void libererFichierTOV(FichierTOV *fichier) {
+void libererFichierTOV(Fichier *fichier) {
     if (fichier == NULL) {
         printf("libererFichierTOV: fichier est NULL\n");
         return;
@@ -70,7 +71,7 @@ void libererFichierTOV(FichierTOV *fichier) {
 }
 
 // Affichage du contenu du fichier TOV
-void afficherFichierTOV(const FichierTOV *fichier) {
+void afficherFichierTOV(const Fichier *fichier) {
     if (fichier == NULL) {
         printf("afficherFichierTOV: fichier est NULL\n");
         return;
@@ -97,7 +98,7 @@ void afficherFichierTOV(const FichierTOV *fichier) {
 }
 
 // Compactage du fichier TOV
-bool Compactage(FichierTOV *fichier) {
+bool Compactage(Fichier *fichier) {
     if (fichier == NULL) {
         printf("Compactage: fichier est NULL\n");
         return false;

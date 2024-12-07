@@ -1,6 +1,6 @@
 #include "tov.h"
 
-bool ajouterEnregistrement(Virtualdisk* ms, FichierTOV* fichier, EnregistrementPhysique *enregistrement, BufferTransmission *buffer) {
+bool ajouterEnregistrement(Virtualdisk* ms, Fichier* fichier, EnregistrementPhysique *enregistrement, BufferTransmission *buffer) {
     if (fichier == NULL || enregistrement == NULL || buffer == NULL || ms == NULL) {
         return false;
     }
@@ -30,24 +30,33 @@ bool ajouterEnregistrement(Virtualdisk* ms, FichierTOV* fichier, EnregistrementP
     memcpy(positionAjout, enregistrement, TAILLE_MAX_ENREGISTREMENT);
     blocActuel->taille++; // Incrément du nombre d'enregistrements
 
-    // Mode interne
-    if (fichier->mode == Interne) {
+
         fichier->enregistrements[fichier->entete.nbEnregistrements] = *enregistrement;
-    }
-    // Mode global
-    else if (fichier->mode == Global) {
-        if (!ajouterDansHashTable(fichier->table, enregistrement->entete.id)) {
-            return false;
-        }
-    }
-
-    // Mise à jour du nombre total d'enregistrements
     fichier->entete.nbEnregistrements++;
-
+    if (fichier->sort==Trie)
+    {
+          qsort(fichier->enregistrements, fichier->entete.nbEnregistrements, sizeof(EnregistrementPhysique), comparerEnregistrements);
+    }
+    
     return true;
 }
+int comparerEnregistrements(const void *a, const void *b) {
+    EnregistrementPhysique *enregA = (EnregistrementPhysique*)a;
+    EnregistrementPhysique *enregB = (EnregistrementPhysique*)b;
+    
+    // Comparaison d'abord par data3
+    int comparaisonData3 = strcmp(enregA->data3, enregB->data3);
+    
+    if (comparaisonData3 != 0) {
+        return comparaisonData3; // Si data3 est différent, on retourne directement
+    }
+    
+    // Si data3 est égal, on compare ensuite par data1
+    return strcmp(enregA->data1, enregB->data1);
+}
 
-bool supprimerEnregistrement(FichierTOV *fichier, int id, BufferTransmission *buffer) {
+
+bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffer) {
     if (fichier == NULL || buffer == NULL) {
         return false;
     }
@@ -55,6 +64,8 @@ bool supprimerEnregistrement(FichierTOV *fichier, int id, BufferTransmission *bu
     bool found = false;
 
     // Parcourir les blocs pour trouver et supprimer l'enregistrement
+    if (fichier->mode==Contigue)
+    {
     for (int i = 0; i < fichier->nbBlocs; i++) {
         Bloc *bloc = &fichier->blocs[i];
         char *blocData = bloc->data;
@@ -70,31 +81,46 @@ bool supprimerEnregistrement(FichierTOV *fichier, int id, BufferTransmission *bu
                 );
                 bloc->taille--; // Mise à jour du nombre d'enregistrements
                 found = true;
+                if (bloc->taille==0)
+                {
+                    libererbloc(fichier,bloc);
+                }
                 break;
             }
         }
 
         if (found) break; // Arrêter si l'enregistrement a été trouvé
     }
+    }else{
+        Bloc *prev = NULL;
+        Bloc *current = fichier->blocs;
 
-    if (found) {
-        // Mise à jour en mode interne
-        if (fichier->mode == Interne) {
-            for (int i = 0; i < fichier->entete.nbEnregistrements; i++) {
-                if (fichier->enregistrements[i].entete.id == id) {
-                    for (int j = i; j < fichier->entete.nbEnregistrements - 1; j++) {
-                        fichier->enregistrements[j] = fichier->enregistrements[j + 1];
-                    }
-                    fichier->entete.nbEnregistrements--;
-                    break;
+        while (current != NULL && !found) {
+            char *blocData = current->data;
+
+            for (int offset = 0; offset < current->taille; offset++) {
+                EnregistrementPhysique *enr = (EnregistrementPhysique *)(blocData + (offset * TAILLE_MAX_ENREGISTREMENT));
+                if (enr->entete.id == id) {
+                    // Décaler les enregistrements suivants
+                    memmove(
+                        blocData + (offset * TAILLE_MAX_ENREGISTREMENT),
+                        blocData + ((offset + 1) * TAILLE_MAX_ENREGISTREMENT),
+                        (current->taille - offset - 1) * TAILLE_MAX_ENREGISTREMENT
+                    );
+                    current->taille--; // Mise à jour du nombre d'enregistrements dans le bloc
+                    found = true;
+                if (current->taille==0)
+                {
+                    libererbloc(fichier,current);
                 }
+                
+                break;
             }
         }
-        // Mise à jour en mode global
-        else if (fichier->mode == Global) {
-            Supprimerduhash(fichier->table, id);
         }
+
     }
+
 
     return found;
 }
@@ -122,33 +148,18 @@ void ecrireEnregistrement(FILE *fichier, EnregistrementPhysique *enregistrement)
             enregistrement->data2,
             enregistrement->data3);
 }
-EnregistrementPhysique *rechercherEnregistrement(FichierTOV *fichier, HashTable *hashTable, int id)
+EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier,int id)
 {
-    if (fichier == NULL || hashTable == NULL)
+    if (fichier == NULL )
     {
         return NULL;
     }
-    if (fichier->mode==Interne)
+    if (fichier->mode==Contigue)
     {
         
     }else{ 
             
     
-    /*calcule l'indice dans la table de hachage pour l'id donne en utilisant la fonction de hachage*/
-        int index = hashFunction(id, hashTable->taille);
-
-    // verifying if id is stocked at the this index
-        if (hashTable->table[index] == id)
-        {
-             // find l'enregistrement dans le tableau "enregistrements" de "fichier"
-            for (int i = 0; i < fichier->entete.nbEnregistrements; i++)
-            {
-                if (fichier->enregistrements[i].entete.id == id)
-                {
-                    return &fichier->enregistrements[i];
-                } 
-            }
-        }
     }
     return NULL; // enregistrement not found
 }

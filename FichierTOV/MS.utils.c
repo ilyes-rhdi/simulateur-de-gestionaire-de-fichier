@@ -1,7 +1,7 @@
 #include "tov.h"
 
 Virtualdisk* InitialiseMs(int nbloc) {
-    // Allouer la mémoire pour la structure Virtualdisk
+    // Allouer la mémoire pour la ms
     Virtualdisk* I = malloc(sizeof(Virtualdisk));
     if (I == NULL) {
         fprintf(stderr, "Erreur : Allocation mémoire échouée pour Virtualdisk.\n");
@@ -32,13 +32,12 @@ Virtualdisk* InitialiseMs(int nbloc) {
         }
 
         newBloc->data = (void*)tableAllocation; // Premier bloc contient la table d'allocation
-        newBloc->taille = nbloc * sizeof(int);  // Taille de la table d'allocation
+        newBloc->taille = 1;  // on suppose qu'il prend l'epace pour 1 enregistrement
         newBloc->numBloc = 0;
         newBloc->estComplet = true;
         newBloc->next = NULL;
 
         // Le premier bloc devient la tête de la liste chaînée
-        
         I->bloc = newBloc;
 
     return I;
@@ -50,7 +49,7 @@ void VidezMS(Virtualdisk* ms) {
     } else{
         bloc001* tableAllocation = (bloc001*)ms->bloc->data;
         // Mode contigu : vider tous les blocs dans le tableau
-        ModifierTableAllocation(ms,-1,0);
+        ModifierTableAllocation(ms,-1);
         for (int i = 1; i < ms->nb_blocs; i++) {
             tableAllocation[i].adresbloc->taille = 0;
             tableAllocation[i].adresbloc->numBloc = i;
@@ -78,7 +77,8 @@ void ModifierTableAllocation(Virtualdisk* ms, int indexBloc) {
         bloc001* tableAllocation = (bloc001*)ms->bloc->data;
     if (indexBloc == -1)
     {
-        //en cas ou il faut vider toute la memoir secondaire
+        /* -1 ces un indicateur pour vider la ms
+        en cas ou il faut vider toute la memoir secondaire*/
         for (int i = 0; i < ms->nb_blocs -1; i++)
         {
             tableAllocation[i].isfull=0;
@@ -98,65 +98,67 @@ void ModifierTableAllocation(Virtualdisk* ms, int indexBloc) {
     
 
     // Afficher l'état de la table d'allocation après modification
-    printf("Table d'allocation modifiée. Bloc %d est maintenant %d.\n", indexBloc, nouvelleValeur);
+    printf("Table d'allocation modifiée. Bloc %d est maintenant %d.\n", indexBloc,tableAllocation[indexBloc].isfull);
 }
-void AjouterBloc(Virtualdisk* ms,FichierTOV *FichierTOV) {
+void AjouterBloc(Virtualdisk* ms,Fichier *Fichier) {
     if (ms == NULL) {
         printf("Erreur : Mémoire secondaire non initialisée.\n");
         return;
     }
 
-    if (FichierTOV->mode == Contigue) {
+    if (Fichier->mode == Contigue) {
         // Accéder à la table d'allocation
         bloc001* tableAllocation = (bloc001*)ms->bloc[0].data;
 
         // Trouver ou je peut ajouter
         int j = 0;
-        while (j < ms->nb_blocs && tableAllocation[j].adresbloc != NULL) {
+        while (j < ms->nb_blocs && tableAllocation[j].adresbloc != NULL  ){
             j++;
         }
 
-        if (j == FichierTOV->nbBlocs) {
+        if (j == Fichier->max_bloc) {
             printf("Impossible d'ajouter un bloc : fichier pleine.\n");
             return;
         }
 
         // Agrandir le tableau de blocs
-        Bloc* newBlocs = malloc((j + 1) * sizeof(Bloc));
+        Bloc* newBlocs = malloc((Fichier->nbBlocs+ 1) * sizeof(Bloc));
         if (newBlocs == NULL) {
             printf("Erreur : Allocation mémoire échouée.\n");
             return;
         }
 
         // Copier les anciens blocs dans le nouveau tableau
-        for (int i = 0; i < j; i++) {
-            newBlocs[i] = FichierTOV->blocs[i];
+        for (int i = 0; i < Fichier->nbBlocs ; i++) {
+            newBlocs[i] = Fichier->blocs[i];
         }
 
         // Libérer l'ancien tableau
-        free(FichierTOV->blocs);
+        free(Fichier->blocs);
 
         // Initialiser le nouveau bloc
-        newBlocs[j].data = malloc(TAILLE_MAX_BLOC);
-        if (newBlocs[j].data == NULL) {
+        newBlocs [Fichier->nbBlocs].data = malloc(TAILLE_MAX_BLOC);
+        if (newBlocs[Fichier->nbBlocs].data == NULL) {
             printf("Erreur : Allocation mémoire échouée pour le nouveau bloc.\n");
             free(newBlocs);
             return;
         }
-        newBlocs[j].taille = 0;
-        newBlocs[j].numBloc = j;
-        newBlocs[j].estComplet = false;
-        newBlocs[j].next = NULL;
+        newBlocs[Fichier->nbBlocs].taille = 0;
+        newBlocs[Fichier->nbBlocs].numBloc = Fichier->nbBlocs+ 1;
+        newBlocs[Fichier->nbBlocs].estComplet = false;
+        newBlocs[Fichier->nbBlocs].next = NULL;
 
         // Mettre à jour la table d'allocation
-        tableAllocation[j].isfull = 1;
-        tableAllocation[j].adresbloc = &newBlocs[j]; // Marquer comme utilisé
+        tableAllocation[Fichier->nbBlocs].isfull = 1;
+        tableAllocation[Fichier->nbBlocs].adresbloc = &newBlocs[j]; // Marquer comme utilisé
+
 
         // Mettre à jour la référence du tableau de blocs
-        FichierTOV->blocs = newBlocs;
+        Fichier->blocs = newBlocs;
+        Fichier->nbBlocs++;
     } else {  // Mode Chaînée
         // Parcourir la liste pour trouver le dernier bloc
-        Bloc* head = FichierTOV->blocs;
+        Bloc* head = Fichier->blocs;
         Bloc* prec = NULL;
 
         while (head != NULL) {
@@ -185,30 +187,95 @@ void AjouterBloc(Virtualdisk* ms,FichierTOV *FichierTOV) {
 
         // Ajouter le nouveau bloc à la liste
         if (prec == NULL) {
-            FichierTOV->blocs = newBloc;  // La liste était vide
+            Fichier->blocs = newBloc;  // La liste était vide
         } else {
             prec->next = newBloc;
         }
+        Fichier->nbBlocs++;
     }
 }
-Bloc *trouverBlocAvecEspace(FichierTOV* fichier){
+Bloc *trouverBlocAvecEspace(Fichier* fichier){
     if (fichier == NULL) {
         return NULL;
     }
     if (fichier->mode == Contigue)
     {
-        for (int i = 0; i < fichier->nbBlocs - 1; i++)
+        for (int i = 0; i < fichier->nbBlocs ; i++)
     {
-        if (fichier->blocs->taille < TAILLE_MAX_BLOC/TAILLE_MAX_ENREGISTREMENT && !fichier->blocs[i]->estComplet)
+        if ((fichier->blocs+i)->taille < TAILLE_MAX_BLOC/TAILLE_MAX_ENREGISTREMENT && !(fichier->blocs+i)->estComplet)
         {
-            return fichier->blocs[i]; 
+            return (fichier->blocs+i); 
         }
             
     }
+
+    }else{
+        Bloc* head = fichier->blocs;
+        while (head!=NULL)
+        {
+            if (head->taille< TAILLE_MAX_BLOC/TAILLE_MAX_ENREGISTREMENT && ! head->estComplet)
+            {
+                return head;
+            }
+            head=head->next;
+            
+        }
+        
     }
     
  
     return NULL;
     
+    
+}
+bool libererBloc(Fichier *fichier,Bloc *blocDirect) {
+    if (fichier == NULL) {
+        return false; // Vérification des paramètres
+    }
+
+    // Cas du mode contigu
+    if (fichier->mode == Contigue) {
+        if (blocDirect->numBloc < 0 || blocDirect->numBloc >= fichier->nbBlocs) {
+            return false; // Numéro de bloc invalide
+        }
+
+        // Décaler les blocs suivants pour combler l'espace
+        for (int i = blocDirect->numBloc; i < fichier->nbBlocs - 1; i++) {
+            fichier->blocs[i] = fichier->blocs[i + 1];
+        }
+
+        fichier->nbBlocs--; // Réduction du nombre de blocs
+        return true;
+    }
+
+    // Cas du mode chaîné
+    if (fichier->mode == Chainee) {
+        if (blocDirect == NULL) {
+            return false; // Pointeur de bloc invalide
+        }
+
+        Bloc *prev = NULL;
+        Bloc *current = fichier->blocs;
+
+        // Rechercher le bloc dans la liste chaînée
+        while (current != NULL) {
+            if (current == blocDirect) {
+                // Supprimer le bloc
+                if (prev != NULL) {
+                    prev->next = current->next;
+                } else {
+                    fichier->blocs = current->next; 
+                }
+
+                free(current); 
+                return true;
+            }
+            fichier->nbBlocs--;
+            prev = current;
+            current = current->next;
+        }
+    }
+
+    return false; 
 }
 

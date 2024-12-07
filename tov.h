@@ -57,7 +57,7 @@ typedef struct {
     int nbEnregistrements; //ce champ stocke le nombre actuel d'enregistrements dans le fichier TOV
     int capaciteMax;       //le nombre maximum d'enregistrements que le fichier peut contenir
     int nextID;            // nouveau champ pour suivre l'id global
-} EnteteFichierTOV;
+} EnteteFichier;
 
 
 typedef struct {
@@ -92,7 +92,7 @@ typedef enum {
 
 //cette structure represente le fichier TOV
 typedef struct {
-    EnteteFichierTOV entete;
+    EnteteFichier entete;
     char nomFichier[256];  // Nom du fichier, modifiable à tout moment
     ModeOrganisationE mode;
     ModeOrganisationF sort;  
@@ -100,30 +100,31 @@ typedef struct {
     EnregistrementPhysique *enregistrements;
     HashTable *table;
     Bloc *blocs;     // Tableau de blocs pour la gestion de la mémoire
-    int nbBlocs;  // taille en blocs
-} FichierTOV;
+    int nbBlocs;
+    int max_bloc// taille en blocs
+} Fichier;
 
 
 
 // Prototypes de fonctions pour la gestion du fichier TOV
 
 //Verifiez si fichier n'est pas NULL
-void initialiserFichierTOV(FichierTOV *fichier, int capaciteMax);
+void initialiserFichierTOV(Fichier *fichier, int capaciteMax);
 
 //Verifiez si fichier n'est pas NULL
-void libererFichierTOV(FichierTOV *fichier);
+void libererFichierTOV(Fichier *fichier);
 
 //Verifiez si fichier et le Buffer ne sont pas NULL
-bool ajouterEnregistrement(FichierTOV *fichier, HashTable *hashTable, EnregistrementPhysique *enregistrement,BufferTransmission *buffer);
+bool ajouterEnregistrement(Fichier *fichier, HashTable *hashTable, EnregistrementPhysique *enregistrement,BufferTransmission *buffer);
 
 //Verifiez si fichier n'est pas NULL
-bool supprimerEnregistrement(FichierTOV *fichier, HashTable *hashTable, int id,BufferTransmission *buffer);
+bool supprimerEnregistrement(Fichier *fichier, HashTable *hashTable, int id,BufferTransmission *buffer);
 
 //Verifiez si fichier n'est pas NULL
-EnregistrementPhysique *rechercherEnregistrement(FichierTOV *fichier, HashTable *hashTable, int id); //changed to fit the new function
+EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier, HashTable *hashTable, int id); //changed to fit the new function
 
 //Verifiez si fichier n'est pas NULL
-void afficherFichierTOV(const FichierTOV *fichier);
+void afficherFichierTOV(const Fichier *fichier);
 
 
 // pour hed les 2 procedures verifiez les tailles bch n'evitiw le depassement de buffer (hws 3liha)
