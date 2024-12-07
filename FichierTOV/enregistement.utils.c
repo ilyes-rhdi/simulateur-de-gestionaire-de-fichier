@@ -140,7 +140,7 @@ bool lireEnregistrement(FILE *fichier, EnregistrementPhysique *enregistrement) {
                   enregistrement->data3) == 4;
 }
 
-// Fonction d'écriture
+
 void ecrireEnregistrement(FILE *fichier, EnregistrementPhysique *enregistrement) {
     fprintf(fichier, "%d|%s|%s|%s\n",
             enregistrement->entete.id,
@@ -148,18 +148,88 @@ void ecrireEnregistrement(FILE *fichier, EnregistrementPhysique *enregistrement)
             enregistrement->data2,
             enregistrement->data3);
 }
-EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier,int id)
-{
-    if (fichier == NULL )
-    {
+EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier, int id, const char *cle) {
+    if (fichier == NULL || cle == NULL) {
+        return NULL; // Vérification des paramètres
+    }
+
+    // Recherche dans les blocs
+    if (fichier->mode == Contigue) {
+        // Mode contigu
+        for (int i = 0; i < fichier->nbBlocs; i++) {
+            Bloc *bloc = &fichier->blocs[i];
+
+            // Si trié, utiliser une recherche binaire
+            if (fichier->sort == Trie) {
+                EnregistrementPhysique *result = rechercheBinaireDansBloc(bloc, cle);
+                if (result != NULL) {
+                    return result;
+                }
+            } else { // Sinon, recherche séquentielle
+                EnregistrementPhysique *result = rechercheSequencielleDansBloc(bloc, id);
+                if (result != NULL) {
+                    return result;
+                }
+            }
+        }
+    } else {
+        // Mode chaîné
+        Bloc *current = fichier->blocs;
+        while (current != NULL) {
+            // Si trié, utiliser une recherche binaire
+            if (fichier->sort == Trie) {
+                EnregistrementPhysique *result = rechercheBinaireDansBloc(current, cle);
+                if (result != NULL) {
+                    return result;
+                }
+            } else { // Sinon, recherche séquentielle
+                EnregistrementPhysique *result = rechercheSequencielleDansBloc(current, id);
+                if (result != NULL) {
+                    return result;
+                }
+            }
+            current = current->next; // Passer au bloc suivant
+        }
+    }
+
+    return NULL; // Si non trouvé
+}
+EnregistrementPhysique *rechercheSequencielleDansBloc(Bloc *bloc, int id) {
+    if (bloc == NULL) {
         return NULL;
     }
-    if (fichier->mode==Contigue)
-    {
-        
-    }else{ 
-            
-    
+
+    for (int offset = 0; offset < bloc->taille; offset++) {
+        EnregistrementPhysique *enr = (EnregistrementPhysique *)(bloc->data + (offset * TAILLE_MAX_ENREGISTREMENT));
+        if (enr->entete.id == id) {
+            return enr;
+        }
     }
-    return NULL; // enregistrement not found
+
+    return NULL; // Non trouvé
+}
+
+EnregistrementPhysique *rechercheBinaireDansBloc(Bloc *bloc, const char *cle) {
+    if (bloc == NULL || cle == NULL) {
+        return NULL;
+    }
+
+    int debut = 0;
+    int fin = bloc->taille - 1;
+
+    while (debut <= fin) {
+        int milieu = (debut + fin) / 2;
+        EnregistrementPhysique *enr = (EnregistrementPhysique *)(bloc->data + (milieu * TAILLE_MAX_ENREGISTREMENT));
+
+        int comparaison = strcmp(enr->data3, cle);
+        if (comparaison == 0) {
+            return enr; // Trouvé
+        } else if (comparaison < 0) {
+            debut = milieu + 1;
+        } else {
+            fin = milieu - 1;
+        }
+    }
+
+    return NULL; // Non trouvé
 }
