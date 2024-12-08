@@ -221,7 +221,7 @@ EnregistrementPhysique *rechercheBinaireDansBloc(Bloc *bloc, const char *cle) {
         int milieu = (debut + fin) / 2;
         EnregistrementPhysique *enr = (EnregistrementPhysique *)(bloc->data + (milieu * TAILLE_MAX_ENREGISTREMENT));
 
-        int comparaison = strcmp(enr->data3, cle);
+        int comparaison = strcmp(enr->data1, cle);
         if (comparaison == 0) {
             return enr; // Trouvé
         } else if (comparaison < 0) {

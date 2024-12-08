@@ -23,6 +23,7 @@ Fichier *initialiserFichierTOV(int capaciteMax, const char *nom, ModeOrganisatio
     fichier->entete.nbEnregistrements = 0;
     fichier->entete.capaciteMax = capaciteMax;
     fichier->entete.nextID = 0;
+    fichier->enregistrements = (EnregistrementPhysique *)malloc(fichier->entete.capaciteMax * sizeof(EnregistrementPhysique));
 
     // Initialisation des blocs selon le mode
     if (mode == Contigue) {
