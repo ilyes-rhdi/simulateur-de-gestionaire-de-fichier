@@ -13,11 +13,12 @@
 
 typedef struct {
     int id; // Utilisé pour identifier de manière unique chaque enregistrement
+    bool suppprimer ;
 } EnteteEnregistrement;
 
 typedef struct Bloc {
-    char *data;             // Données du bloc
-    int taille;             // Espace utilisé dans le bloc
+    EnregistrementPhysique *enregistrements;
+    int taille;             // Espace utilisé dans le bloc en eregistrement 
     int numBloc;            // Numéro du bloc pour identification
     bool estComplet;       // Indicateur si le bloc est plein
     struct Bloc* next;     // Pointeur vers le bloc suivant

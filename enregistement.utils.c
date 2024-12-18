@@ -24,18 +24,12 @@ bool ajouterEnregistrement(Virtualdisk* ms, Fichier* fichier, EnregistrementPhys
             return false; // Échec si aucun bloc valide n'est trouvé
         }
     }
-
-    // Ajouter l'enregistrement au bloc actuel
-    void* positionAjout = blocActuel->data + (blocActuel->taille * TAILLE_MAX_ENREGISTREMENT);
-    memcpy(positionAjout, enregistrement, TAILLE_MAX_ENREGISTREMENT);
     blocActuel->taille++; // Incrément du nombre d'enregistrements
-
-
-        fichier->enregistrements[fichier->entete.nbEnregistrements] = *enregistrement;
+    blocActuel->enregistrements[blocActuel->taille]= *enregistrement;
     fichier->entete.nbEnregistrements++;
     if (fichier->sort==Trie)
     {
-          qsort(fichier->enregistrements, fichier->entete.nbEnregistrements, sizeof(EnregistrementPhysique), comparerEnregistrements);
+          qsort(blocActuel->enregistrements,blocActuel->taille, sizeof(EnregistrementPhysique), comparerEnregistrements);
     }
     
     return true;
@@ -45,18 +39,92 @@ int comparerEnregistrements(const void *a, const void *b) {
     EnregistrementPhysique *enregB = (EnregistrementPhysique*)b;
     
     // Comparaison d'abord par data3
-    int comparaisonData3 = strcmp(enregA->data3, enregB->data3);
+    int comparaisonData3 = stricmp(enregA->data3, enregB->data3);
     
     if (comparaisonData3 != 0) {
         return comparaisonData3; // Si data3 est différent, on retourne directement
     }
     
     // Si data3 est égal, on compare ensuite par data1
-    return strcmp(enregA->data1, enregB->data1);
+    return stricmp(enregA->data1, enregB->data1);
 }
 
 
-bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffer) {
+bool supprimerEnregistrement_Physique(Fichier *fichier, int id, BufferTransmission *buffer) {
+    if (fichier == NULL || buffer == NULL) {
+        return false;
+    }
+
+    bool found = false;
+
+    if (fichier->mode == Contigue) {
+        // Mode contigu : blocs gérés séquentiellement
+        for (int i = 0; i < fichier->nbBlocs; i++) {
+            Bloc *bloc = &fichier->blocs[i];
+
+            for (int j = 0; j < bloc->taille; j++) {
+                if (bloc->enregistrements[j].entete.id == id) {
+                    // Supprimer l'enregistrement en décalant les éléments suivants
+                    memmove(
+                        &bloc->enregistrements[j],
+                        &bloc->enregistrements[j + 1],
+                        (bloc->taille - j - 1) * sizeof(EnregistrementPhysique)
+                    );
+                    bloc->taille--; // Mise à jour du nombre d'enregistrements
+                    found = true;
+
+                    // Libérer le bloc si vide
+                    if (bloc->taille == 0) {
+                        libererbloc(fichier, bloc);
+                    }
+                    break;
+                }
+            }
+
+            if (found) break; // Arrêter si l'enregistrement est supprimé
+        }
+    } else {
+        // Mode chaîné : blocs liés par des pointeurs
+        Bloc *prev = NULL;
+        Bloc *current = fichier->blocs;
+
+        while (current != NULL) {
+            for (int j = 0; j < current->taille; j++) {
+                if (current->enregistrements[j].entete.id == id) {
+                    // Supprimer l'enregistrement en décalant les éléments suivants
+                    memmove(
+                        &current->enregistrements[j],
+                        &current->enregistrements[j + 1],
+                        (current->taille - j - 1) * sizeof(EnregistrementPhysique)
+                    );
+                    current->taille--; // Mise à jour du nombre d'enregistrements
+                    found = true;
+
+                    // Libérer le bloc si vide
+                    if (current->taille == 0) {
+                        if (prev == NULL) {
+                            fichier->blocs = current->next; // Premier bloc
+                        } else {
+                            prev->next = current->next; // Bloc intermédiaire ou final
+                        }
+                        libererbloc(fichier, current);
+                    }
+                    break;
+                }
+            }
+
+            if (found) break; // Arrêter si l'enregistrement est supprimé
+
+            // Passer au bloc suivant
+            prev = current;
+            current = current->next;
+        }
+    }
+
+    return found;
+}
+
+bool supprimerEnregistrement_Logique(Fichier *fichier, int id, BufferTransmission *buffer) {
     if (fichier == NULL || buffer == NULL) {
         return false;
     }

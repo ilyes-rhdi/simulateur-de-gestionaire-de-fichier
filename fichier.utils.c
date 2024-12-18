@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 // Initialisation du fichierTOV
-Fichier *initialiserFichierTOV(int capaciteMax, const char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
+Fichier *initialiserFichier(int capaciteMax, const char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
     Fichier *fichier = malloc(sizeof(Fichier));
     if (fichier == NULL) {
         fprintf(stderr, "Erreur : Allocation mémoire échouée pour le fichier.\n");
@@ -19,15 +19,14 @@ Fichier *initialiserFichierTOV(int capaciteMax, const char *nom, ModeOrganisatio
     fichier->mode = mode;
     fichier->sort = sort;
     fichier->nbBlocs = 0;
-    fichier->max_bloc=(capaciteMax*TAILLE_MAX_ENREGISTREMENT)/TAILLE_MAX_BLOC + 1;
+    fichier->max_bloc = (capaciteMax * TAILLE_MAX_ENREGISTREMENT) / TAILLE_MAX_BLOC + 1;
     fichier->entete.nbEnregistrements = 0;
     fichier->entete.capaciteMax = capaciteMax;
     fichier->entete.nextID = 0;
-    fichier->enregistrements = (EnregistrementPhysique *)malloc(fichier->entete.capaciteMax * sizeof(EnregistrementPhysique));
 
     // Initialisation des blocs selon le mode
     if (mode == Contigue) {
-        fichier->blocs = calloc(fichier->nbBlocs, sizeof(Bloc));
+        fichier->blocs = calloc(fichier->max_bloc, sizeof(Bloc));
         if (fichier->blocs == NULL) {
             fprintf(stderr, "Erreur : Allocation mémoire échouée pour les blocs contigus.\n");
             free(fichier);
@@ -41,13 +40,13 @@ Fichier *initialiserFichierTOV(int capaciteMax, const char *nom, ModeOrganisatio
 }
 
 // Libération de la mémoire du fichier TOV
-void libererFichierTOV(Fichier *fichier) {
+void libererFichier(Fichier *fichier) {
     if (fichier == NULL) {
-        printf("libererFichierTOV: fichier est NULL\n");
+        printf("libererFichier: fichier est NULL\n");
         return;
     }
 
-    // Suppression du fichier physique
+    // Suppression du fichier physique (non nécessaire dans ce cas, c'est une simulation)
     if (access(fichier->nomFichier, F_OK) == 0) {
         if (remove(fichier->nomFichier) != 0) {
             fprintf(stderr, "Erreur : Échec de suppression du fichier %s.\n", fichier->nomFichier);
@@ -56,89 +55,102 @@ void libererFichierTOV(Fichier *fichier) {
 
     // Libération mémoire selon le mode
     if (fichier->mode == Contigue) {
+        for (int i = 0; i < fichier->nbBlocs; i++) {
+            free(fichier->blocs[i].enregistrements);
+        }
         free(fichier->blocs);
     } else if (fichier->mode == Chainee) {
         Bloc *current = fichier->blocs;
         while (current != NULL) {
             Bloc *next = current->next;
-            free(current->data); // Libération des données du bloc
+            free(current->enregistrements); // Libération des données du bloc
             free(current);       // Libération du bloc
             current = next;
         }
     }
 
     free(fichier); // Libération de la structure FichierTOV elle-même
-    printf("libererFichierTOV: mémoire libérée et fichier supprimé\n");
+    printf("libererFichier: mémoire libérée et fichier supprimé\n");
 }
 
-// Affichage du contenu du fichier TOV
-void afficherFichierTOV(const Fichier *fichier) {
+// Affichage du contenu du fichier
+void afficherFichier(const Fichier *fichier) {
     if (fichier == NULL) {
-        printf("afficherFichierTOV: fichier est NULL\n");
+        printf("afficherFichier: fichier est NULL\n");
         return;
     }
 
-    printf("Fichier TOV contient %d enregistrements:\n", fichier->entete.nbEnregistrements);
+    printf("Fichier contient %d enregistrements:\n", fichier->entete.nbEnregistrements);
 
     if (fichier->mode == Contigue) {
-        for (int i = 0; i < fichier->entete.nbEnregistrements; i++) {
-            printf("Enregistrement %d:\n", i);
-            printf("data1: %s\n", fichier->enregistrements[i].data1);
-            printf("data2: %s\n", fichier->enregistrements[i].data2);
-            printf("data3: %s\n", fichier->enregistrements[i].data3);
+        for (int i = 0; i < fichier->nbBlocs; i++) {
+            for (int j = 0; j < fichier->blocs[i].taille; j++) {
+                printf("Enregistrement %d:\n", j);
+                printf("data1: %s\n", fichier->blocs[i].enregistrements[j].data1);
+                printf("data2: %s\n", fichier->blocs[i].enregistrements[j].data2);
+                printf("data3: %s\n", fichier->blocs[i].enregistrements[j].data3);
+            }
         }
     } else if (fichier->mode == Chainee) {
         Bloc *current = fichier->blocs;
         int index = 0;
         while (current != NULL) {
             printf("Bloc %d:\n", index++);
-            printf("Data: %s\n", current->data);
+            for (int i = 0; i < current->taille; i++) {
+                printf("Enregistrement %d:\n", i);
+                printf("data1: %s\n", current->enregistrements[i].data1);
+                printf("data2: %s\n", current->enregistrements[i].data2);
+                printf("data3: %s\n", current->enregistrements[i].data3);
+            }
             current = current->next;
         }
     }
 }
 
 // Compactage du fichier TOV
-bool Compactage(Fichier *fichier) {
+bool Compactage(Fichier* fichier) {
     if (fichier == NULL) {
-        printf("Compactage: fichier est NULL\n");
+        printf("Compactage : fichier est NULL\n");
         return false;
     }
 
-    const char *nomFichierTemp = "tempFichierTOV.tov";
-    FILE *fichierPhysique = fopen(fichier->nomFichier, "r");
-    FILE *fichierTemp = fopen(nomFichierTemp, "w");
-
-    if (fichierPhysique == NULL || fichierTemp == NULL) {
-        if (fichierPhysique) fclose(fichierPhysique);
-        if (fichierTemp) fclose(fichierTemp);
+    // Allocation d'un tableau temporaire pour les enregistrements compactés
+    EnregistrementPhysique* enregistrementsCompactes = malloc(fichier->entete.capaciteMax * sizeof(EnregistrementPhysique));
+    if (enregistrementsCompactes == NULL) {
+        printf("Compactage : échec d'allocation pour les enregistrements compactés\n");
         return false;
     }
 
-    EnregistrementPhysique enregistrement;
     int nouveauxNbEnregistrements = 0;
 
-    // Lecture et réécriture des enregistrements valides
-    while (lireEnregistrement(fichierPhysique, &enregistrement)) {
-        if (enregistrementValide(&enregistrement)) {
-            ecrireEnregistrement(fichierTemp, &enregistrement);
-            nouveauxNbEnregistrements++;
+    // Parcourir les blocs existants et copier les enregistrements valides dans le tableau compacté
+    for (int i = 0; i < fichier->nbBlocs; i++) {
+        Bloc* bloc = &fichier->blocs[i];
+        for (int j = 0; j < bloc->taille; j++) {
+            EnregistrementPhysique* enregistrement = &bloc->enregistrements[j];
+            if (enregistrementValide(enregistrement)) {
+                enregistrementsCompactes[nouveauxNbEnregistrements++] = *enregistrement;
+            }
         }
     }
 
-    fclose(fichierPhysique);
-    fclose(fichierTemp);
+    // Réorganiser les blocs avec les enregistrements compactés
+    int indexCompacte = 0;
+    for (int i = 0; i < fichier->nbBlocs; i++) {
+        Bloc* bloc = &fichier->blocs[i];
+        bloc->taille = 0;  // Réinitialisation du bloc avant de réécrire les enregistrements
 
-    // Remplacement de l'ancien fichier par le fichier compacté
-    if (remove(fichier->nomFichier) != 0) {
-        printf("Compactage: échec de suppression du fichier original\n");
-        return false;
-    }
-    if (rename(nomFichierTemp, fichier->nomFichier) != 0) {
-        printf("Compactage: échec de renommage du fichier temporaire\n");
-        return false;
+        // Ajouter des enregistrements au bloc tant qu'il y a de la place
+        while (bloc->taille < TAILLE_MAX_BLOC && indexCompacte < nouveauxNbEnregistrements) {
+            bloc->enregistrements[bloc->taille++] = enregistrementsCompactes[indexCompacte++];
+        }
     }
 
+    // Mise à jour du nombre d'enregistrements dans l'entête
     fichier->entete.nbEnregistrements = nouveauxNbEnregistrements;
+
+    // Libération du tableau temporaire
+    free(enregistrementsCompactes);
+
     return true;
 }

@@ -147,6 +147,8 @@ void AjouterBloc(Virtualdisk* ms,Fichier *Fichier) {
         newBlocs[Fichier->nbBlocs].numBloc = Fichier->nbBlocs+ 1;
         newBlocs[Fichier->nbBlocs].estComplet = false;
         newBlocs[Fichier->nbBlocs].next = NULL;
+        newBlocs[Fichier->nbBlocs].enregistrements = (EnregistrementPhysique *)malloc(TAILLE_MAX_BLOC / TAILLE_MAX_ENREGISTREMENT * sizeof(EnregistrementPhysique));
+
 
         // Mettre à jour la table d'allocation
         tableAllocation[Fichier->nbBlocs].isfull = 1;
