@@ -105,8 +105,8 @@ bool Compactage(Fichier *fichier);
 bool ajouterEnregistrement(Virtualdisk* ms, Fichier* fichier, EnregistrementPhysique *enregistrement, BufferTransmission *buffer);
 bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffer);
 EnregistrementPhysique* rechercheSequencielleDansBloc(Bloc *bloc, int id);
-EnregistrementPhysique* rechercheBinaireDansBloc(Bloc *bloc, const char *cle);
-EnregistrementPhysique* rechercherEnregistrement(Fichier *fichier, int id, const char *cle);
+EnregistrementPhysique* rechercheBinaireDansBloc(Bloc *bloc, const char *name,const char *sec);
+EnregistrementPhysique* rechercherEnregistrement(Fichier *fichier, int id, const char * name,const char *sec);
 void afficherFichier(const Fichier *fichier);
 
 bool lireEnregistrement(FILE *fichier, EnregistrementPhysique *enregistrement);

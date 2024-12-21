@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 // Initialisation du fichierTOV
-Fichier *initialiserFichier(int capaciteMax, const char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
+Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms, char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
     Fichier *fichier = malloc(sizeof(Fichier));
     if (fichier == NULL) {
         fprintf(stderr, "Erreur : Allocation mémoire échouée pour le fichier.\n");
@@ -32,6 +32,24 @@ Fichier *initialiserFichier(int capaciteMax, const char *nom, ModeOrganisationF 
             free(fichier);
             return NULL;
         }
+        fichier->nbBlocs=fichier->max_bloc;
+        for (int  i = 0; i < fichier->nbBlocs; i++)
+        {
+            fichier->blocs[i].enregistrements= malloc((TAILLE_MAX_BLOC / TAILLE_MAX_ENREGISTREMENT) * sizeof(EnregistrementPhysique));
+            if (fichier->blocs[i].enregistrements == NULL)
+            {
+                printf("Erreur : Allocation mémoire échouée pour les enregistrements.\n");
+                free(fichier->blocs[i].enregistrements);
+                return;
+            }
+            fichier->blocs[i].estComplet= false;
+            fichier->blocs[i].next=NULL;
+            fichier->blocs[i].taille = 0;
+            fichier->blocs[i].numBloc = (i==0) ? 0 : fichier->blocs[i-1].numBloc + 1;
+            
+            ModifierTableAllocation(ms,fichier->blocs[i].numBloc);
+        }      
+        
     } else if (mode == Chainee) {
         fichier->blocs = NULL; // Les blocs seront alloués dynamiquement
     }

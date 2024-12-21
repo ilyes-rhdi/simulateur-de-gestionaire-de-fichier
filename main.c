@@ -58,7 +58,7 @@ int main() {
     afficherFichier(fichier);
 
     // Recherche de l'enregistrement ajouté dans le fichier
-    EnregistrementPhysique *resultat = rechercherEnregistrement(fichier, enregistrement.entete.id,"ilyes rachedi");
+    EnregistrementPhysique *resultat = rechercherEnregistrement(fichier, enregistrement.entete.id,"ilyes rachedi","C");
     if (resultat != NULL) {
         printf("Enregistrement trouve : %s, %s, %s\n", resultat->data1, resultat->data2, resultat->data3);
     } else {

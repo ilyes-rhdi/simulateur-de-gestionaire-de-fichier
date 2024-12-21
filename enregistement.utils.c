@@ -131,64 +131,42 @@ bool supprimerEnregistrement_Logique(Fichier *fichier, int id, BufferTransmissio
 
     bool found = false;
 
-    // Parcourir les blocs pour trouver et supprimer l'enregistrement
-    if (fichier->mode==Contigue)
-    {
-    for (int i = 0; i < fichier->nbBlocs; i++) {
-        Bloc *bloc = &fichier->blocs[i];
-        char *blocData = bloc->data;
+    if (fichier->mode == Contigue) {
+        // Mode contigu : blocs gérés séquentiellement
+        for (int i = 0; i < fichier->nbBlocs; i++) {
+            Bloc *bloc = &fichier->blocs[i];
 
-        for (int offset = 0; offset < bloc->taille; offset++) {
-            EnregistrementPhysique *enr = (EnregistrementPhysique *)(blocData + (offset * TAILLE_MAX_ENREGISTREMENT));
-            if (enr->entete.id == id) {
-                // Décaler les enregistrements suivants
-                memmove(
-                    blocData + (offset * TAILLE_MAX_ENREGISTREMENT),
-                    blocData + ((offset + 1) * TAILLE_MAX_ENREGISTREMENT),
-                    (bloc->taille - offset - 1) * TAILLE_MAX_ENREGISTREMENT
-                );
-                bloc->taille--; // Mise à jour du nombre d'enregistrements
-                found = true;
-                if (bloc->taille==0)
-                {
-                    libererbloc(fichier,bloc);
+            for (int j = 0; j < bloc->taille; j++) {
+                if (bloc->enregistrements[j].entete.id == id) {
+                    bloc->enregistrements[j].entete.suppprimer=true;
+                    found = true;
+
+                    break;
                 }
-                break;
             }
+            if (found) break; // Arrêter si l'enregistrement est supprimé
         }
-
-        if (found) break; // Arrêter si l'enregistrement a été trouvé
-    }
-    }else{
+    } else {
+        // Mode chaîné : blocs liés par des pointeurs
         Bloc *prev = NULL;
         Bloc *current = fichier->blocs;
 
-        while (current != NULL && !found) {
-            char *blocData = current->data;
-
-            for (int offset = 0; offset < current->taille; offset++) {
-                EnregistrementPhysique *enr = (EnregistrementPhysique *)(blocData + (offset * TAILLE_MAX_ENREGISTREMENT));
-                if (enr->entete.id == id) {
-                    // Décaler les enregistrements suivants
-                    memmove(
-                        blocData + (offset * TAILLE_MAX_ENREGISTREMENT),
-                        blocData + ((offset + 1) * TAILLE_MAX_ENREGISTREMENT),
-                        (current->taille - offset - 1) * TAILLE_MAX_ENREGISTREMENT
-                    );
-                    current->taille--; // Mise à jour du nombre d'enregistrements dans le bloc
+        while (current != NULL) {
+            for (int j = 0; j < current->taille; j++) {
+                if (current->enregistrements[j].entete.id == id) {
+                    current->enregistrements[j].entete.suppprimer=true;
                     found = true;
-                if (current->taille==0)
-                {
-                    libererbloc(fichier,current);
+                    break;
                 }
-                
-                break;
             }
-        }
-        }
 
+            if (found) break; // Arrêter si l'enregistrement est supprimé
+
+            // Passer au bloc suivant
+            prev = current;
+            current = current->next;
+        }
     }
-
 
     return found;
 }
@@ -196,7 +174,7 @@ bool supprimerEnregistrement_Logique(Fichier *fichier, int id, BufferTransmissio
 
 // Fonction de validation
 bool enregistrementValide(const EnregistrementPhysique *enregistrement) {
-    return enregistrement != NULL && enregistrement->entete.id >= 0;
+    return enregistrement != NULL && enregistrement->entete.id >= 0 && enregistrement->entete.suppprimer ;
 }
 
 // Fonction de lecture
@@ -216,7 +194,7 @@ void ecrireEnregistrement(FILE *fichier, EnregistrementPhysique *enregistrement)
             enregistrement->data2,
             enregistrement->data3);
 }
-EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier, int id, const char *cle) {
+EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier, int id, const char *cle,const char *sec) {
     if (fichier == NULL || cle == NULL) {
         return NULL; // Vérification des paramètres
     }
@@ -229,7 +207,7 @@ EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier, int id, const
 
             // Si trié, utiliser une recherche binaire
             if (fichier->sort == Trie) {
-                EnregistrementPhysique *result = rechercheBinaireDansBloc(bloc, cle);
+                EnregistrementPhysique *result = rechercheBinaireDansBloc(bloc, cle,sec);
                 if (result != NULL) {
                     return result;
                 }
@@ -246,7 +224,7 @@ EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier, int id, const
         while (current != NULL) {
             // Si trié, utiliser une recherche binaire
             if (fichier->sort == Trie) {
-                EnregistrementPhysique *result = rechercheBinaireDansBloc(current, cle);
+                EnregistrementPhysique *result = rechercheBinaireDansBloc(current, cle,sec);
                 if (result != NULL) {
                     return result;
                 }
@@ -267,31 +245,44 @@ EnregistrementPhysique *rechercheSequencielleDansBloc(Bloc *bloc, int id) {
         return NULL;
     }
 
-    for (int offset = 0; offset < bloc->taille; offset++) {
-        EnregistrementPhysique *enr = (EnregistrementPhysique *)(bloc->data + (offset * TAILLE_MAX_ENREGISTREMENT));
-        if (enr->entete.id == id) {
-            return enr;
+    for (int i = 0; i < bloc->taille; i++) {
+        if (bloc->enregistrements[i].entete.id == id) {
+            return bloc->enregistrements + i ;
         }
     }
 
     return NULL; // Non trouvé
 }
 
-EnregistrementPhysique *rechercheBinaireDansBloc(Bloc *bloc, const char *cle) {
-    if (bloc == NULL || cle == NULL) {
+EnregistrementPhysique *rechercheBinaireDansBloc(Bloc *bloc, const char *name, const char *sec) {
+    // Vérification des paramètres
+    if (bloc == NULL || name == NULL || sec == NULL) {
         return NULL;
     }
 
     int debut = 0;
     int fin = bloc->taille - 1;
 
+    // Boucle pour la recherche binaire
     while (debut <= fin) {
         int milieu = (debut + fin) / 2;
-        EnregistrementPhysique *enr = (EnregistrementPhysique *)(bloc->data + (milieu * TAILLE_MAX_ENREGISTREMENT));
 
-        int comparaison = strcmp(enr->data1, cle);
+        // Récupération de l'enregistrement au milieu
+        EnregistrementPhysique *enr = &bloc->enregistrements[milieu];
+
+        // Comparaison avec sec
+        int comparaison = stricmp(enr->data3, sec);
         if (comparaison == 0) {
-            return enr; // Trouvé
+            // Si sec correspond, comparer avec name
+            int comparaison1 = stricmp(enr->data1, name);
+            if (comparaison1 == 0) {
+                // Si les deux conditions correspondent, retourner l'enregistrement
+                return enr;
+            } else if (comparaison1 < 0) {
+                debut = milieu + 1;
+            } else {
+                fin = milieu - 1;
+            }
         } else if (comparaison < 0) {
             debut = milieu + 1;
         } else {
@@ -299,5 +290,6 @@ EnregistrementPhysique *rechercheBinaireDansBloc(Bloc *bloc, const char *cle) {
         }
     }
 
-    return NULL; // Non trouvé
+    // Non trouvé
+    return NULL;
 }

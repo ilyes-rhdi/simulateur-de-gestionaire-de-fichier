@@ -18,27 +18,28 @@ Virtualdisk* InitialiseMs(int nbloc) {
         return NULL;
     }
 
-    // Initialiser la table d'allocation à -1 (tous les blocs sont libres au début et pas allouer )
-    for (int i = 1; i < nbloc; i++) {
+    // Initialiser la table d'allocation à -1 (tous les blocs sont libres au début)
+    for (int i = 0; i < nbloc; i++) {
         tableAllocation[i].isfull = 0; // 0 = Libre
-        tableAllocation[i].adresbloc=NULL;
+        tableAllocation[i].adresbloc = NULL;
     }
-        Bloc* newBloc = malloc(sizeof(Bloc));
-        if (newBloc == NULL) {
-            fprintf(stderr, "Erreur : Allocation mémoire échouée pour le premier bloc.\n");
-            free(tableAllocation);
-            free(I);
-            return NULL;
-        }
 
-        newBloc->data = (void*)tableAllocation; // Premier bloc contient la table d'allocation
-        newBloc->taille = 1;  // on suppose qu'il prend l'epace pour 1 enregistrement
-        newBloc->numBloc = 0;
-        newBloc->estComplet = true;
-        newBloc->next = NULL;
+    Bloc* newBloc = malloc(sizeof(Bloc));
+    if (newBloc == NULL) {
+        fprintf(stderr, "Erreur : Allocation mémoire échouée pour le premier bloc.\n");
+        free(tableAllocation);
+        free(I);
+        return NULL;
+    }
 
-        // Le premier bloc devient la tête de la liste chaînée
-        I->bloc = newBloc;
+    newBloc->enregistrements = (void*)tableAllocation; // Premier bloc contient la table d'allocation
+    newBloc->taille = 0;  // Pas encore d'enregistrements
+    newBloc->numBloc = 0;
+    newBloc->estComplet = true;
+    newBloc->next = NULL;
+
+    // Le premier bloc devient la tête de la liste chaînée
+    I->bloc = newBloc;
 
     return I;
 }
@@ -46,18 +47,27 @@ Virtualdisk* InitialiseMs(int nbloc) {
 void VidezMS(Virtualdisk* ms) {
     if (ms == NULL) {
         printf("Memoire secondaire déjà vide\n");
-    } else{
-        bloc001* tableAllocation = (bloc001*)ms->bloc->data;
-        // Mode contigu : vider tous les blocs dans le tableau
-        ModifierTableAllocation(ms,-1);
-        for (int i = 1; i < ms->nb_blocs; i++) {
-            tableAllocation[i].adresbloc->taille = 0;
-            tableAllocation[i].adresbloc->numBloc = i;
-            tableAllocation[i].adresbloc->estComplet = false; // Par défaut, le bloc est vide
-            tableAllocation[i].adresbloc->next = NULL;        // Non utilisé en mode contigu
+        return;
+    }
+
+    bloc001* tableAllocation = (bloc001*)ms->bloc->enregistrements;
+    if (tableAllocation == NULL) {
+        printf("Erreur : Table d'allocation introuvable.\n");
+        return;
+    }
+
+    // Vider la table d'allocation
+    ModifierTableAllocation(ms, -1);
+
+    // Libérer chaque bloc
+    for (int i = 1; i < ms->nb_blocs; i++) {
+        if (tableAllocation[i].adresbloc != NULL) {
+            free(tableAllocation[i].adresbloc);
+            tableAllocation[i].adresbloc = NULL;
         }
-    } 
- 
+    }
+
+    printf("Mémoire secondaire vidée avec succès.\n");
 }
 
 void ModifierTableAllocation(Virtualdisk* ms, int indexBloc) {
@@ -66,218 +76,131 @@ void ModifierTableAllocation(Virtualdisk* ms, int indexBloc) {
         return;
     }
 
-    // Vérifier si l'index est valide
-    if (indexBloc < -1 || indexBloc >= ms->nb_blocs) {
-        printf("Erreur : Index du bloc invalide.\n");
+    bloc001* tableAllocation = (bloc001*)ms->bloc->enregistrements;
+    if (tableAllocation == NULL) {
+        printf("Erreur : Table d'allocation introuvable.\n");
         return;
     }
 
-    // Accéder à la table d'allocation dans le premier bloc
-   
-        bloc001* tableAllocation = (bloc001*)ms->bloc->data;
-    if (indexBloc == -1)
-    {
-        /* -1 ces un indicateur pour vider la ms
-        en cas ou il faut vider toute la memoir secondaire*/
-        for (int i = 0; i < ms->nb_blocs -1; i++)
-        {
-            tableAllocation[i].isfull=0;
-            tableAllocation[i].adresbloc=NULL;
-        } 
-    }else
-    {
-       // Modifier la valeur de la table d'allocation pour l'index spécifié
-       if (tableAllocation[indexBloc].adresbloc->estComplet)
-       {
-            tableAllocation[indexBloc].isfull = 1;
-       }else{
-             tableAllocation[indexBloc].isfull = 0;
-       }
-       
-    }
-    
-
-    // Afficher l'état de la table d'allocation après modification
-    printf("Table d'allocation modifiée. Bloc %d est maintenant %d.\n", indexBloc,tableAllocation[indexBloc].isfull);
-}
-void AjouterBloc(Virtualdisk* ms,Fichier *Fichier) {
-    if (ms == NULL) {
-        printf("Erreur : Mémoire secondaire non initialisée.\n");
-        return;
-    }
-
-    if (Fichier->mode == Contigue) {
-        // Accéder à la table d'allocation
-        bloc001* tableAllocation = (bloc001*)ms->bloc[0].data;
-
-        // Trouver ou je peut ajouter
-        int j = 0;
-        while (j < ms->nb_blocs && tableAllocation[j].adresbloc != NULL  ){
-            j++;
+    if (indexBloc == -1) {
+        // Vider toute la table d'allocation
+        for (int i = 0; i < ms->nb_blocs; i++) {
+            tableAllocation[i].isfull = 0;
+            tableAllocation[i].adresbloc = NULL;
         }
-
-        if (j == Fichier->max_bloc) {
-            printf("Impossible d'ajouter un bloc : fichier pleine.\n");
-            return;
-        }
-
-        // Agrandir le tableau de blocs
-        Bloc* newBlocs = malloc((Fichier->nbBlocs+ 1) * sizeof(Bloc));
-        if (newBlocs == NULL) {
-            printf("Erreur : Allocation mémoire échouée.\n");
-            return;
-        }
-
-        // Copier les anciens blocs dans le nouveau tableau
-        for (int i = 0; i < Fichier->nbBlocs ; i++) {
-            newBlocs[i] = Fichier->blocs[i];
-        }
-
-        // Libérer l'ancien tableau
-        free(Fichier->blocs);
-
-        // Initialiser le nouveau bloc
-        newBlocs [Fichier->nbBlocs].data = malloc(TAILLE_MAX_BLOC);
-        if (newBlocs[Fichier->nbBlocs].data == NULL) {
-            printf("Erreur : Allocation mémoire échouée pour le nouveau bloc.\n");
-            free(newBlocs);
-            return;
-        }
-        newBlocs[Fichier->nbBlocs].taille = 0;
-        newBlocs[Fichier->nbBlocs].numBloc = Fichier->nbBlocs+ 1;
-        newBlocs[Fichier->nbBlocs].estComplet = false;
-        newBlocs[Fichier->nbBlocs].next = NULL;
-        newBlocs[Fichier->nbBlocs].enregistrements = (EnregistrementPhysique *)malloc(TAILLE_MAX_BLOC / TAILLE_MAX_ENREGISTREMENT * sizeof(EnregistrementPhysique));
-
-
-        // Mettre à jour la table d'allocation
-        tableAllocation[Fichier->nbBlocs].isfull = 1;
-        tableAllocation[Fichier->nbBlocs].adresbloc = &newBlocs[j]; // Marquer comme utilisé
-
-
-        // Mettre à jour la référence du tableau de blocs
-        Fichier->blocs = newBlocs;
-        Fichier->nbBlocs++;
-    } else {  // Mode Chaînée
-        // Parcourir la liste pour trouver le dernier bloc
-        Bloc* head = Fichier->blocs;
-        Bloc* prec = NULL;
-
-        while (head != NULL) {
-            prec = head;
-            head = head->next;
-        }
-
-        // Allouer et initialiser un nouveau bloc
-        Bloc* newBloc = malloc(sizeof(Bloc));
-        if (newBloc == NULL) {
-            printf("Erreur : Allocation mémoire échouée pour le nouveau bloc.\n");
-            return;
-        }
-
-        newBloc->data = malloc(TAILLE_MAX_BLOC);
-        if (newBloc->data == NULL) {
-            printf("Erreur : Allocation mémoire échouée pour les données du bloc.\n");
-            free(newBloc);
-            return;
-        }
-
-        newBloc->taille = 0;
-        newBloc->numBloc = (prec == NULL) ? 0 : prec->numBloc + 1;
-        newBloc->estComplet = false;
-        newBloc->next = NULL;
-
-        // Ajouter le nouveau bloc à la liste
-        if (prec == NULL) {
-            Fichier->blocs = newBloc;  // La liste était vide
+        printf("Table d'allocation vidée.\n");
+    } else if (indexBloc >= 0 && indexBloc < ms->nb_blocs) {
+        // Modifier un bloc spécifique
+        if (tableAllocation[indexBloc].adresbloc != NULL) {
+            tableAllocation[indexBloc].isfull = tableAllocation[indexBloc].adresbloc->estComplet ? 1 : 0;
         } else {
-            prec->next = newBloc;
+            tableAllocation[indexBloc].isfull = 0;
         }
-        Fichier->nbBlocs++;
+
+        printf("Table d'allocation modifiée. Bloc %d est maintenant %d.\n", indexBloc, tableAllocation[indexBloc].isfull);
+    } else {
+        printf("Erreur : Index du bloc invalide.\n");
     }
 }
-Bloc *trouverBlocAvecEspace(Fichier* fichier){
+
+void AjouterBloc(Virtualdisk* ms, Fichier* fichier) {
+    if (ms == NULL || fichier == NULL) {
+        printf("Erreur : Paramètres invalides.\n");
+        return;
+    }
+    Bloc* dernier = fichier->blocs;
+    while (dernier != NULL && dernier->next != NULL) {
+        dernier = dernier->next;
+    }
+
+    Bloc* newBloc = malloc(sizeof(Bloc));
+    if (newBloc == NULL) {
+        printf("Erreur : Allocation mémoire échouée pour le nouveau bloc.\n");
+        return;
+    }
+
+    newBloc->enregistrements = malloc((TAILLE_MAX_BLOC / TAILLE_MAX_ENREGISTREMENT) * sizeof(EnregistrementPhysique));
+    if (newBloc->enregistrements == NULL) {
+        printf("Erreur : Allocation mémoire échouée pour les enregistrements.\n");
+        free(newBloc);
+        return;
+    }
+
+    newBloc->taille = 0;
+    newBloc->numBloc = (dernier == NULL) ? 0 : dernier->numBloc + 1;
+    newBloc->estComplet = false;
+    newBloc->next = NULL;
+
+    if (dernier == NULL) {
+        fichier->blocs = newBloc;
+    } else {
+        dernier->next = newBloc;
+    }
+
+    fichier->nbBlocs++;
+}
+
+Bloc* trouverBlocAvecEspace(Fichier* fichier) {
     if (fichier == NULL) {
         return NULL;
     }
-    if (fichier->mode == Contigue)
-    {
-        for (int i = 0; i < fichier->nbBlocs ; i++)
-    {
-        if ((fichier->blocs+i)->taille < TAILLE_MAX_BLOC/TAILLE_MAX_ENREGISTREMENT && !(fichier->blocs+i)->estComplet)
-        {
-            return (fichier->blocs+i); 
-        }
-            
-    }
 
-    }else{
-        Bloc* head = fichier->blocs;
-        while (head!=NULL)
-        {
-            if (head->taille< TAILLE_MAX_BLOC/TAILLE_MAX_ENREGISTREMENT && ! head->estComplet)
-            {
-                return head;
+    if (fichier->mode == Contigue) {
+        for (int i = 0; i < fichier->nbBlocs; i++) {
+            if (fichier->blocs[i].taille < (TAILLE_MAX_BLOC / TAILLE_MAX_ENREGISTREMENT) && !fichier->blocs[i].estComplet) {
+                return &fichier->blocs[i];
             }
-            head=head->next;
-            
         }
-        
-    }
-    
- 
-    return NULL;
-    
-    
-}
-bool libererBloc(Fichier *fichier,Bloc *blocDirect) {
-    if (fichier == NULL) {
-        return false; // Vérification des paramètres
+    } else {
+        Bloc* current = fichier->blocs;
+        while (current != NULL) {
+            if (current->taille < (TAILLE_MAX_BLOC / TAILLE_MAX_ENREGISTREMENT) && !current->estComplet) {
+                return current;
+            }
+            current = current->next;
+        }
     }
 
-    // Cas du mode contigu
+    return NULL;
+}
+
+bool libererBloc(Fichier* fichier, Bloc* blocDirect) {
+    if (fichier == NULL || blocDirect == NULL) {
+        return false;
+    }
+
     if (fichier->mode == Contigue) {
         if (blocDirect->numBloc < 0 || blocDirect->numBloc >= fichier->nbBlocs) {
-            return false; // Numéro de bloc invalide
+            return false;
         }
 
-        // Décaler les blocs suivants pour combler l'espace
         for (int i = blocDirect->numBloc; i < fichier->nbBlocs - 1; i++) {
             fichier->blocs[i] = fichier->blocs[i + 1];
         }
 
-        fichier->nbBlocs--; // Réduction du nombre de blocs
+        fichier->nbBlocs--;
         return true;
-    }
+    } else if (fichier->mode == Chainee) {
+        Bloc* prev = NULL;
+        Bloc* current = fichier->blocs;
 
-    // Cas du mode chaîné
-    if (fichier->mode == Chainee) {
-        if (blocDirect == NULL) {
-            return false; // Pointeur de bloc invalide
-        }
-
-        Bloc *prev = NULL;
-        Bloc *current = fichier->blocs;
-
-        // Rechercher le bloc dans la liste chaînée
         while (current != NULL) {
             if (current == blocDirect) {
-                // Supprimer le bloc
                 if (prev != NULL) {
                     prev->next = current->next;
                 } else {
-                    fichier->blocs = current->next; 
+                    fichier->blocs = current->next;
                 }
 
-                free(current); 
+                free(current->enregistrements);
+                free(current);
+                fichier->nbBlocs--;
                 return true;
             }
-            fichier->nbBlocs--;
             prev = current;
             current = current->next;
         }
     }
 
-    return false; 
+    return false;
 }
-
