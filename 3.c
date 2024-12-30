@@ -93,32 +93,29 @@ void libererFichier(Fichier *fichier) {
 
 // Affichage du contenu du fichier
 void afficherFichier(const Fichier *fichier) {
-    if (fichier == NULL) {
+    if (!fichier) {
         printf("afficherFichier: fichier est NULL\n");
         return;
     }
 
+    char buffer[256];
     printf("Fichier contient %d enregistrements:\n", fichier->entete.nbEnregistrements);
 
     if (fichier->mode == Contigue) {
         for (int i = 0; i < fichier->nbBlocs; i++) {
             for (int j = 0; j < fichier->blocs[i].taille; j++) {
-                printf("Enregistrement %d:\n", j);
-                printf("data1: %s\n", fichier->blocs[i].enregistrements[j].data1);
-                printf("data2: %s\n", fichier->blocs[i].enregistrements[j].data2);
-                printf("data3: %s\n", fichier->blocs[i].enregistrements[j].data3);
+                ecrireEnregistrement(buffer, sizeof(buffer),&fichier->blocs[i].enregistrements[j]);
+                printf("Enregistrement %d: %s\n", j, buffer);
             }
         }
     } else if (fichier->mode == Chainee) {
         Bloc *current = fichier->blocs;
         int index = 0;
-        while (current != NULL) {
+        while (current) {
             printf("Bloc %d:\n", index++);
             for (int i = 0; i < current->taille; i++) {
-                printf("Enregistrement %d:\n", i);
-                printf("data1: %s\n", current->enregistrements[i].data1);
-                printf("data2: %s\n", current->enregistrements[i].data2);
-                printf("data3: %s\n", current->enregistrements[i].data3);
+                ecrireEnregistrement(buffer, sizeof(buffer), &current->enregistrements[i]);
+                printf("Enregistrement %d: %s\n", i, buffer);
             }
             current = current->next;
         }

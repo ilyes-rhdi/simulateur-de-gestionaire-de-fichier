@@ -1,5 +1,5 @@
-#ifndef TOV_H
-#define TOV_H
+#ifndef MYLIB_H
+#define MYLIB_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,23 +7,14 @@
 #include <string.h>
 
 #define TAILLE_MAX_ENREGISTREMENT 256
-#define TAILLE_BUFFER 512
-#define TAILLE_MAX_BLOC 2560
+#define TAILLE_BUFFER 768
+#define TAILLE_MAX_BLOC 768
 #define SEPARATEUR '|'
 
 typedef struct {
     int id; // Utilisé pour identifier de manière unique chaque enregistrement
     bool suppprimer ;
 } EnteteEnregistrement;
-
-typedef struct Bloc {
-    EnregistrementPhysique *enregistrements;
-    int taille;             // Espace utilisé dans le bloc en eregistrement 
-    int numBloc;            // Numéro du bloc pour identification
-    bool estComplet;       // Indicateur si le bloc est plein
-    struct Bloc* next;     // Pointeur vers le bloc suivant
-} Bloc;
-
 // Ajout de nouveaux champs à l'enregistrement physique
 typedef struct {
     EnteteEnregistrement entete;
@@ -31,6 +22,13 @@ typedef struct {
     char data2[TAILLE_MAX_ENREGISTREMENT];
     char data3[TAILLE_MAX_ENREGISTREMENT];
 } EnregistrementPhysique;
+typedef struct Bloc {
+    EnregistrementPhysique *enregistrements;
+    int taille;             // Espace utilisé dans le bloc en eregistrement 
+    int numBloc;            // Numéro du bloc pour identification
+    bool estComplet;       // Indicateur si le bloc est plein
+    struct Bloc* next;     // Pointeur vers le bloc suivant
+} Bloc;
 
 // Structure pour implémenter une table de hachage
 typedef struct Element {
@@ -95,7 +93,7 @@ void VidezMS(Virtualdisk* ms);
 void remplirBuffer(BufferTransmission *buffer, const char *data);
 void viderBuffer(BufferTransmission *buffer);
 void ModifierTableAllocation(Virtualdisk* ms, int indexBloc);
-Fichier *initialiserFichier(int capaciteMax, const char *nom, ModeOrganisationF sort, ModeOrganisationE mode);
+Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms, char *nom, ModeOrganisationF sort, ModeOrganisationE mode);
 void libererFichier(Fichier *fichier);
 void AjouterBloc(Virtualdisk* ms,Fichier *Fichier);
 Bloc* trouverBlocAvecEspace(Fichier* fichier);
@@ -103,14 +101,15 @@ bool libererBloc(Fichier *fichier, Bloc *blocDirect);
 int comparerEnregistrements(const void *a, const void *b);
 bool Compactage(Fichier *fichier);
 bool ajouterEnregistrement(Virtualdisk* ms, Fichier* fichier, EnregistrementPhysique *enregistrement, BufferTransmission *buffer);
-bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffer);
+bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffer, bool suppression_physique);
+bool supprimerEnregistrement_Physique(Fichier *fichier, int id, BufferTransmission *buffer);
+bool supprimerEnregistrement_Logique(Fichier *fichier, int id, BufferTransmission *buffer);
 EnregistrementPhysique* rechercheSequencielleDansBloc(Bloc *bloc, int id);
 EnregistrementPhysique* rechercheBinaireDansBloc(Bloc *bloc, const char *name,const char *sec);
 EnregistrementPhysique* rechercherEnregistrement(Fichier *fichier, int id, const char * name,const char *sec);
 void afficherFichier(const Fichier *fichier);
-
-bool lireEnregistrement(FILE *fichier, EnregistrementPhysique *enregistrement);
-void ecrireEnregistrement(FILE *fichier, EnregistrementPhysique *enregistrement);
+bool lireEnregistrement(EnregistrementPhysique *enregistrement, const char *buffer);
+void ecrireEnregistrement(char *buffer, size_t size, EnregistrementPhysique *enregistrement);
 bool enregistrementValide(const EnregistrementPhysique *enregistrement);
 // Fonctions de gestion des buffers
 void libererHashTable(HashTable *hashTable);

@@ -108,6 +108,14 @@ void AjouterBloc(Virtualdisk* ms, Fichier* fichier) {
         printf("Erreur : Paramètres invalides.\n");
         return;
     }
+    if (fichier->nbBlocs>=fichier->max_bloc)
+    {
+        printf("Fichier %s est complet\n",fichier->nomFichier);
+        return;
+    }
+    
+    if (fichier->mode == Chainee)
+    {
     Bloc* dernier = fichier->blocs;
     while (dernier != NULL && dernier->next != NULL) {
         dernier = dernier->next;
@@ -138,6 +146,7 @@ void AjouterBloc(Virtualdisk* ms, Fichier* fichier) {
     }
 
     fichier->nbBlocs++;
+    }
 }
 
 Bloc* trouverBlocAvecEspace(Fichier* fichier) {
