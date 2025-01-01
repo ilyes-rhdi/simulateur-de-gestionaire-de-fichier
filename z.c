@@ -58,13 +58,6 @@ int main() {
     } else {
         printf("Erreur lors de l'ajout de l'enregistrement.\n");
     }
-    if (ajouterEnregistrement(ms, fichier, &enregistrement3, &buffer)) {
-        printf("Enregistrement ajouté avec succès.\n");
-    } else {
-        printf("Erreur lors de l'ajout de l'enregistrement.\n");
-    }
-
-
     // Affichage des informations du fichier
     afficherFichier(fichier);
 
@@ -76,14 +69,38 @@ int main() {
         printf("Enregistrement non trouve.\n");
     }
 
-    if (supprimerEnregistrement(fichier, resultat->entete.id, &buffer,true)) {
+    if (supprimerEnregistrement(ms,fichier, resultat->entete.id, &buffer,false)) {
         printf("Enregistrement supprimé\n");
+    }
+    EnregistrementPhysique *resultat1 = rechercherEnregistrement(fichier, enregistrement.entete.id, "karim rachedi", "C");
+    if (resultat != NULL) {
+        printf("Enregistrement trouve : %s, %s, %s\n", resultat1->data1, resultat1->data2, resultat1->data3);
+    } else {
+        printf("Enregistrement non trouve.\n");
+    }
+
+    if (supprimerEnregistrement(ms,fichier, resultat1->entete.id, &buffer,false)) {
+        printf("Enregistrement supprimé\n");
+    }
+    if (ajouterEnregistrement(ms, fichier, &enregistrement3, &buffer)) {
+        printf("Enregistrement ajouté avec succès.\n");
+    } else {
+        printf("Erreur lors de l'ajout de l'enregistrement.\n");
+    }
+
+    Compactage(fichier);
+    
+    if (ajouterEnregistrement(ms, fichier, &enregistrement3, &buffer)) {
+        printf("Enregistrement ajouté avec succès.\n");
+    } else {
+        printf("Erreur lors de l'ajout de l'enregistrement.\n");
     }
 
     afficherFichier(fichier);
 
     // Libération de la mémoire allouée pour le fichier
     libererFichier(fichier);
+    VidezMS(ms);
 
     return 0;
 }

@@ -1,5 +1,5 @@
 #include "mylib.h"
-#define MAX_ENREGISTREMENTS_PAR_BLOC (TAILLE_MAX_BLOC /TAILLE_MAX_ENREGISTREMENT )+1
+
 bool ajouterEnregistrement(Virtualdisk* ms, Fichier* fichier, EnregistrementPhysique *enregistrement, BufferTransmission *buffer) {
     if (!ms || !fichier || !enregistrement || !buffer || 
         fichier->entete.nbEnregistrements >= (fichier->entete.capaciteMax * MAX_ENREGISTREMENTS_PAR_BLOC)) {
@@ -57,7 +57,7 @@ static void supprimerDansBloc(Bloc *bloc, int index, bool suppression_physique) 
     }
 }
 
-bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffer, bool suppression_physique) {
+bool supprimerEnregistrement(Virtualdisk *ms,Fichier *fichier, int id, BufferTransmission *buffer, bool suppression_physique) {
     if (!fichier || !buffer) return false;
 
     bool found = false;
@@ -69,7 +69,7 @@ bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffe
                     supprimerDansBloc(bloc, j, suppression_physique);
                     found = true;
                     if (suppression_physique && bloc->taille == 0) {
-                        libererBloc(fichier, bloc);
+                        libererBloc(fichier, bloc,ms);
                     }
                     break;
                 }
@@ -89,7 +89,7 @@ bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffe
                         } else {
                             prev->next = current->next;
                         }
-                        libererBloc(fichier, current);
+                        libererBloc(fichier, current,ms);
                     }
                     break;
                 }
@@ -106,13 +106,6 @@ bool supprimerEnregistrement(Fichier *fichier, int id, BufferTransmission *buffe
     return found;
 }
 
-bool supprimerEnregistrement_Physique(Fichier *fichier, int id, BufferTransmission *buffer) {
-    return supprimerEnregistrement(fichier, id, buffer, true);
-}
-
-bool supprimerEnregistrement_Logique(Fichier *fichier, int id, BufferTransmission *buffer) {
-    return supprimerEnregistrement(fichier, id, buffer, false);
-}
 
 EnregistrementPhysique *rechercherEnregistrement(Fichier *fichier, int id, const char *cle,const char *sec) {
     if (fichier == NULL || cle == NULL) {

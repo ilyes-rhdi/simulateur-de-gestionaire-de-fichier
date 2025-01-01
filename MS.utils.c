@@ -9,6 +9,23 @@ Virtualdisk* InitialiseMs(int nbloc) {
     }
 
     I->nb_blocs = nbloc;
+    I->nb=0;
+    I->table_fichiers = malloc(nbloc*sizeof(Fichier));
+    if (I->table_fichiers == NULL) {
+        fprintf(stderr, "Erreur : Allocation mémoire échouée pour la table d'allocation des fichier .\n");
+        free(I);
+        return NULL;
+    }
+    for (int i = 0; i < nbloc; i++) {
+    I->table_fichiers[i].nomFichier[0] = '\0';
+    I->table_fichiers[i].mode = Contigue;
+    I->table_fichiers[i].sort = NoTrie;
+    I->table_fichiers[i].nbBlocs = 0;
+    I->table_fichiers[i].max_bloc = 0;
+    I->table_fichiers[i].entete.nbEnregistrements = 0;
+    I->table_fichiers[i].entete.capaciteMax = 0;
+    I->table_fichiers[i].entete.nextID = 0;
+    }
 
     // Allouer la mémoire pour la table d'allocation dans le premier bloc
     bloc001* tableAllocation = malloc(nbloc * sizeof(bloc001));
@@ -133,9 +150,9 @@ void AjouterBloc(Virtualdisk* ms, Fichier* fichier) {
         free(newBloc);
         return;
     }
-
+    ms->nb_blocs++;
     newBloc->taille = 0;
-    newBloc->numBloc = (dernier == NULL) ? 0 : dernier->numBloc + 1;
+    newBloc->numBloc = ms->nb;
     newBloc->estComplet = false;
     newBloc->next = NULL;
 
@@ -173,7 +190,7 @@ Bloc* trouverBlocAvecEspace(Fichier* fichier) {
     return NULL;
 }
 
-bool libererBloc(Fichier* fichier, Bloc* blocDirect) {
+bool libererBloc(Fichier* fichier, Bloc* blocDirect,Virtualdisk *ms) {
     if (fichier == NULL || blocDirect == NULL) {
         return false;
     }
@@ -209,7 +226,56 @@ bool libererBloc(Fichier* fichier, Bloc* blocDirect) {
             prev = current;
             current = current->next;
         }
+    } 
+    ms->nb_blocs--;
+    return false;
+}
+
+void LireBloc(BufferTransmission *Buffer,Bloc *bloc){
+    if (bloc==NULL)
+    {
+        printf("bloc vide");
+        return;
+    }
+    remplirBuffer(Buffer,bloc);
+}
+void EcrireBloc(BufferTransmission*Buffer,Bloc * bloc){
+    if (!bloc || !Buffer)
+    {
+        printf("bloc ou buffer vide");
+        return;
+    }
+    *bloc=Buffer->B ;
+    viderBuffer(Buffer);
+    
+}
+void afficherBloc(BufferTransmission *Buffer, Bloc *bloc) {
+    if (bloc == NULL || Buffer == NULL) {
+        printf("bloc ou buffer vide\n");
+        return;
     }
 
-    return false;
+    // Lire le bloc dans le buffer
+    LireBloc(Buffer, bloc);
+    
+    // Buffer temporaire pour chaque enregistrement
+    char bufferTemp[256];  // Définir TAILLE_MAX_BUFFER selon vos besoins
+    EnregistrementPhysique enr;
+    
+    // Parcourir les enregistrements du bloc à partir du buffer
+    for (int i = 0; i < Buffer->B.taille; i++) {
+        // Supposons que vous avez une fonction pour obtenir la chaîne de l'enregistrement i
+        // à partir du bloc dans le buffer
+        if (lireEnregistrement(&enr, Buffer->B.enregistrements+i)) {
+            printf("\nEnregistrement %d:\n", i + 1);
+            printf("ID: %d\n", enr.entete.id);
+            printf("Data1: %s\n", enr.data1);
+            printf("Data2: %s\n", enr.data2);
+            printf("Data3: %s\n", enr.data3);
+        }
+    }
+    
+    // Afficher les métadonnées du bloc
+    printf("\nInformations du bloc:\n");
+    printf("Nombre d'enregistrements: %d\n", Buffer->B.taille);
 }

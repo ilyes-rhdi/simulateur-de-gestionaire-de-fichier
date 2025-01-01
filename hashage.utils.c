@@ -1,4 +1,5 @@
 #include "mylib.h"
+// pas le temps de utiliser le hashage
 // nouvelle fonction d'initialisation de la table hashage:          (checked)
 HashTable *initialiserHashTable(int taille) {
     HashTable *hashTable = malloc(sizeof(HashTable));

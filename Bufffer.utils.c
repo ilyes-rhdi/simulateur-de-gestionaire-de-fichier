@@ -4,16 +4,14 @@
 
 
 // utiliser le buffer pour gerer le tampon de transmission avec ces 2 fonctions   (checked)
-void remplirBuffer(BufferTransmission *buffer, const char *data)
+void remplirBuffer(BufferTransmission *buffer,Bloc *bloc)
 {
-    if (buffer == NULL || data == NULL)
+    if (buffer == NULL || bloc == NULL)
         return;
     // copy data to the buffer, leaving space for the null terminator
-    strncpy(buffer->data, data, TAILLE_BUFFER - 1);
-    // explicitly set the last character to '\0' for null termination
-    buffer->data[TAILLE_BUFFER - 1] = '\0';
-    // Update the size of the data in the buffer
-    buffer->taille = strlen(buffer->data);
+    buffer->B=*bloc;
+    buffer->taille=bloc->taille;
+
 }
 
 void viderBuffer(BufferTransmission *buffer)
@@ -21,7 +19,11 @@ void viderBuffer(BufferTransmission *buffer)
     if (buffer == NULL)
         return;
     // set the first character of the buffer to '\0' pour indiquer an empty string
-    buffer->data[0] = '\0';
+    buffer->B.enregistrements = NULL;
+    buffer->B.estComplet=false;
+    buffer->B.next=NULL;
+    buffer->B.numBloc=-1;
+    buffer->B.taille=0;
     // reset the size of the data in the buffer to 0
     buffer->taille = 0;
 }
