@@ -99,13 +99,13 @@ void ModifierTableAllocation(Virtualdisk* ms, int indexBloc) {
         return;
     }
 
-    if (indexBloc == -1) {
+    if (indexBloc == -5) {
         // Vider toute la table d'allocation
         for (int i = 0; i < ms->nb_blocs; i++) {
             tableAllocation[i].isfull = 0;
             tableAllocation[i].adresbloc = NULL;
         }
-        printf("Table d'allocation vidée.\n");
+        printf("Table d'allocation videe.\n");
     } else if (indexBloc >= 0 && indexBloc < ms->nb_blocs) {
         // Modifier un bloc spécifique
         if (tableAllocation[indexBloc].adresbloc != NULL) {
@@ -249,14 +249,14 @@ void EcrireBloc(BufferTransmission*Buffer,Bloc * bloc){
     viderBuffer(Buffer);
     
 }
-void afficherBloc(BufferTransmission *Buffer, Bloc *bloc) {
-    if (bloc == NULL || Buffer == NULL) {
-        printf("bloc ou buffer vide\n");
+void afficherBloc(BufferTransmission *Buffer, Bloc bloc) {
+    if (&bloc == NULL ) {
+        printf("bloc vide\n");
         return;
     }
 
     // Lire le bloc dans le buffer
-    LireBloc(Buffer, bloc);
+    LireBloc(Buffer, &bloc);
     
     // Buffer temporaire pour chaque enregistrement
     char bufferTemp[256];  // Définir TAILLE_MAX_BUFFER selon vos besoins
@@ -264,9 +264,9 @@ void afficherBloc(BufferTransmission *Buffer, Bloc *bloc) {
     
     // Parcourir les enregistrements du bloc à partir du buffer
     for (int i = 0; i < Buffer->B.taille; i++) {
-        // Supposons que vous avez une fonction pour obtenir la chaîne de l'enregistrement i
+        enr=Buffer->B.enregistrements[i];
         // à partir du bloc dans le buffer
-        if (lireEnregistrement(&enr, Buffer->B.enregistrements+i)) {
+        if (lireEnregistrement(&enr,bufferTemp)) {
             printf("\nEnregistrement %d:\n", i + 1);
             printf("ID: %d\n", enr.entete.id);
             printf("Data1: %s\n", enr.data1);

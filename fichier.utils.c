@@ -40,7 +40,7 @@ Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms, char *nom, ModeOrga
             return NULL;
         }
         fichier->nbBlocs=fichier->max_bloc;
-        ms->nb_blocs =+fichier->nbBlocs;
+        ms->nb+=fichier->nbBlocs;
         for (int  i = 0; i < fichier->nbBlocs; i++)
         {
             fichier->blocs[i].enregistrements= malloc((TAILLE_MAX_BLOC / TAILLE_MAX_ENREGISTREMENT) * sizeof(EnregistrementPhysique));
@@ -65,7 +65,7 @@ Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms, char *nom, ModeOrga
         // Pas assez d'espace pour la taille demandée
             if (espaceDisponible <= 0) {
                 printf("Mémoire secondaire pleine, le fichier ne peut pas être créé.\n");
-                return false; // Ou une autre valeur d'erreur appropriée
+                return NULL; // Ou une autre valeur d'erreur appropriée
             } else {
             // On peut créer le fichier mais avec moins de blocs que demandé
                 printf("Le fichier %s va être initialisé avec seulement %d blocs au lieu de %d.\n", 
@@ -81,12 +81,12 @@ Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms, char *nom, ModeOrga
         fichier->blocs = NULL; // Les blocs seront alloués dynamiquement
     }
     int i =0;
-    while (ms->table_fichiers[i].nomFichier[i]!='0')
+    while (*ms->table_fichiers[i].nomFichier!='\0')
     {
         i++;
     }
     strncpy(ms->table_fichiers[i].nomFichier, nom, sizeof(ms->table_fichiers[i].nomFichier) - 1);
-    ms->table_fichiers->nomFichier[sizeof(fichier->nomFichier) - 1] = '\0';
+    ms->table_fichiers[i].nomFichier[sizeof(fichier->nomFichier) - 1] = '\0';
     ms->table_fichiers[i].mode = mode;
     ms->table_fichiers[i].sort = sort;
     ms->table_fichiers[i].nbBlocs = 0;
@@ -133,7 +133,7 @@ void libererFichier(Fichier *fichier) {
 }
 
 // Affichage du contenu du fichier
-void afficherFichier(const Fichier *fichier) {
+void afficherFichier(Fichier *fichier) {
     if (!fichier) {
         printf("afficherFichier: fichier est NULL\n");
         return;
@@ -144,14 +144,15 @@ void afficherFichier(const Fichier *fichier) {
 
     if (fichier->mode == Contigue) {
         for (int i = 0; i < fichier->nbBlocs; i++) {
-            afficherBloc(buffer,fichier->blocs+i);
+
+            afficherBloc(Buffer,fichier->blocs[i]);
         }
     } else if (fichier->mode == Chainee) {
         Bloc *current = fichier->blocs;
         int index = 0;
         while (current) {
             printf("Bloc %d:\n", index++);
-            afficherBloc(buffer,current);
+            afficherBloc(Buffer,*current);
             current = current->next;
         }
     }
@@ -414,7 +415,7 @@ void RenameFichier(const char* name,const char* Newname,Virtualdisk *ms){
      printf("err d'argument");
      return;
     }
-    Fichier * f =ouvrirFichier(name,ms);
+    Fichier * f = ouvrirFichier(name,ms);
     if (!f)
     {
         printf("error a l'ouverture du ficher ou fichier innexcistant  ");

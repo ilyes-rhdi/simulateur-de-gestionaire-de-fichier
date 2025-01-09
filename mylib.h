@@ -63,6 +63,10 @@ typedef enum {
     Contigue,
     Chainee
 } ModeOrganisationF;
+typedef enum {
+    Trie,
+    NoTrie
+} ModeOrganisationE;
 // Structure représentant le fichier 
 typedef struct {
     EnteteFichier entete;
@@ -81,10 +85,7 @@ typedef struct {
     ModeOrganisationF mode;
 } Virtualdisk;
 
-typedef enum {
-    Trie,
-    NoTrie
-} ModeOrganisationE;
+
 
 // Prototypes des fonctions
 Virtualdisk* InitialiseMs(int nbloc);
@@ -93,8 +94,11 @@ void remplirBuffer(BufferTransmission *buffer,Bloc *bloc);
 void viderBuffer(BufferTransmission *buffer);
 void EcrireBloc(BufferTransmission*Buffer,Bloc * bloc);
 void LireBloc(BufferTransmission *Buffer,Bloc *bloc);
-void afficherBloc(BufferTransmission *Buffer, Bloc *bloc);
+void afficherBloc(BufferTransmission *Buffer, Bloc bloc);
 void ModifierTableAllocation(Virtualdisk* ms, int indexBloc);
+void RecupererInfoFichier(Virtualdisk *ms, const char* nom, Fichier* fichier);
+void LireBlocDepuisMS(Virtualdisk *ms, int numBloc, Bloc *bloc);
+bool fichierExisteDansMS(Virtualdisk *ms, const char* nom);
 Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms, char *nom, ModeOrganisationF sort, ModeOrganisationE mode);
 void libererFichier(Fichier *fichier);
 void AjouterBloc(Virtualdisk* ms,Fichier *Fichier);
@@ -102,16 +106,19 @@ Bloc* trouverBlocAvecEspace(Fichier* fichier);
 bool libererBloc(Fichier *fichier, Bloc *blocDirect,Virtualdisk *ms);
 int comparerEnregistrements(const void *a, const void *b);
 bool Compactage(Virtualdisk *ms);
+bool fermerFichier(Fichier* fichier, Virtualdisk* ms);
 bool Defragmentation(Fichier* fichier);
+Fichier* ouvrirFichier(const char* nom, Virtualdisk *ms);
 bool ajouterEnregistrement(Virtualdisk* ms, Fichier* fichier, EnregistrementPhysique *enregistrement, BufferTransmission *buffer);
 bool supprimerEnregistrement(Virtualdisk* ms,Fichier *fichier, int id, BufferTransmission *buffer, bool suppression_physique);
 EnregistrementPhysique* rechercheSequencielleDansBloc(Bloc *bloc, int id);
 EnregistrementPhysique* rechercheBinaireDansBloc(Bloc *bloc, const char *name,const char *sec);
 EnregistrementPhysique* rechercherEnregistrement(Fichier *fichier, int id, const char * name,const char *sec);
-void afficherFichier(const Fichier *fichier);
+void afficherFichier(Fichier *fichier);
 bool lireEnregistrement(EnregistrementPhysique *enregistrement, const char *buffer);
 void ecrireEnregistrement(char *buffer, size_t size, EnregistrementPhysique *enregistrement);
 bool enregistrementValide(const EnregistrementPhysique *enregistrement);
+void RenameFichier(const char* name,const char* Newname,Virtualdisk *ms);
 // Fonctions de gestion des buffers
 void libererHashTable(HashTable *hashTable);
 bool ajouterDansHashTable(HashTable *hashTable, int id);
