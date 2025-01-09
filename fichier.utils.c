@@ -282,7 +282,6 @@ Fichier* ouvrirFichier(const char* nom, Virtualdisk *ms) {
     }
 
     // Chercher dans la table d'allocation du disque virtuel
-    // Supposons que nous avons une fonction qui vérifie si le fichier existe dans le disque virtuel
     if (!fichierExisteDansMS(ms, nom)) {
         fprintf(stderr, "Erreur : Le fichier %s n'existe pas dans le disque virtuel.\n", nom);
         free(fichier);
@@ -290,7 +289,6 @@ Fichier* ouvrirFichier(const char* nom, Virtualdisk *ms) {
     }
 
     // Récupérer les informations du fichier depuis le disque virtuel
-    // Ces fonctions devraient être implémentées dans votre gestionnaire de disque virtuel
     RecupererInfoFichier(ms, nom, fichier);
 
     // Allocation et récupération des blocs selon le mode
@@ -321,7 +319,7 @@ Fichier* ouvrirFichier(const char* nom, Virtualdisk *ms) {
     } else if (fichier->mode == Chainee) {
         // Pour le mode chaîné
         Bloc* dernierBloc = NULL;
-        int numBlocCourant = RecupererPremierBloc(ms, nom);
+        int numBlocCourant = fichier->blocs->numBloc;
 
         while (numBlocCourant != -1) {
             Bloc* nouveauBloc = malloc(sizeof(Bloc));
@@ -348,9 +346,11 @@ Fichier* ouvrirFichier(const char* nom, Virtualdisk *ms) {
                 fichier->blocs = nouveauBloc;
             }
             dernierBloc = nouveauBloc;
-
+            Bloc *L =fichier->blocs;
             // Récupérer le numéro du prochain bloc
-            numBlocCourant = RecupererBlocSuivant(ms, numBlocCourant);
+
+            numBlocCourant = L->next->numBloc ;
+            L=L->next;
         }
     }
 
@@ -407,6 +407,36 @@ void LireBlocDepuisMS(Virtualdisk *ms, int numBloc, Bloc *bloc) {
         printf("Erreur : Tentative d'ecreture dans le  bloc (%d) a echouer \n", numBloc);
         return;
     }
-    
-
+}
+void RenameFichier(const char* name,const char* Newname,Virtualdisk *ms){
+    if (!name || !Newname || !ms )
+    {
+     printf("err d'argument");
+     return;
+    }
+    Fichier * f =ouvrirFichier(name,ms);
+    if (!f)
+    {
+        printf("error a l'ouverture du ficher ou fichier innexcistant  ");
+        return;
+    }
+    strncpy(f->nomFichier,Newname,29);
+}
+bool fermerFichier(Fichier* fichier, Virtualdisk* ms) {
+   if (!fichier || !ms) return false;
+   
+   // Mettre à jour les métadonnées
+   for (int i = 0; i < ms->nb_blocs; i++) {
+       if (strcmp(ms->table_fichiers[i].nomFichier, fichier->nomFichier) == 0) {
+           strncpy(ms->table_fichiers[i].nomFichier,fichier->nomFichier,29);
+            ms->table_fichiers[i].mode=fichier->mode;
+            ms->table_fichiers[i].sort=fichier->sort;
+            ms->table_fichiers[i].nbBlocs=fichier->nbBlocs;
+            ms->table_fichiers[i].max_bloc = fichier->max_bloc ;
+            ms->table_fichiers[i].entete = fichier->entete ;
+            ms->table_fichiers[i].blocs = fichier->blocs;
+           return true;
+       }
+   }
+   return false; 
 }
