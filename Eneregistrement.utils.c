@@ -223,8 +223,8 @@ bool lireEnregistrement(EnregistrementPhysique *enregistrement, const char *buff
                  enregistrement->data3) == 4;
 }
 
-void ecrireEnregistrement(char *buffer, size_t size, EnregistrementPhysique *enregistrement) {
-    if (!buffer || !enregistrement || !enregistrementValide(enregistrement)) return;
+bool ecrireEnregistrement(char *buffer, size_t size, EnregistrementPhysique *enregistrement) {
+    if (!buffer || !enregistrement || !enregistrementValide(enregistrement)) return false;
     
     snprintf(buffer, size, "%d|%s|%s|%s",
             enregistrement->entete.id,

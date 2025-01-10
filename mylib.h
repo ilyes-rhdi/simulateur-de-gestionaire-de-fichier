@@ -55,8 +55,8 @@ typedef struct {
 } bloc001;
 
 typedef struct {
-    Bloc B; // Buffer pour stocker temporairement des données à transmettre
-    int taille;               // Quantité de données actuellement stockées
+    Bloc* B  ; // Buffer pour stocker temporairement des données à transmettre
+    int taille ;               // Quantité de données actuellement stockées
 } BufferTransmission;
 
 typedef enum {
@@ -93,8 +93,8 @@ void VidezMS(Virtualdisk* ms);
 void remplirBuffer(BufferTransmission *buffer,Bloc *bloc);
 void viderBuffer(BufferTransmission *buffer);
 void EcrireBloc(BufferTransmission*Buffer,Bloc * bloc);
-void LireBloc(BufferTransmission *Buffer,Bloc *bloc);
-void afficherBloc(BufferTransmission *Buffer, Bloc bloc);
+bool LireBloc(BufferTransmission *Buffer,Bloc *bloc);
+void afficherBloc(BufferTransmission *Buffer, Bloc* bloc);
 void ModifierTableAllocation(Virtualdisk* ms, int indexBloc);
 void RecupererInfoFichier(Virtualdisk *ms, const char* nom, Fichier* fichier);
 void LireBlocDepuisMS(Virtualdisk *ms, int numBloc, Bloc *bloc);
@@ -116,7 +116,7 @@ EnregistrementPhysique* rechercheBinaireDansBloc(Bloc *bloc, const char *name,co
 EnregistrementPhysique* rechercherEnregistrement(Fichier *fichier, int id, const char * name,const char *sec);
 void afficherFichier(Fichier *fichier);
 bool lireEnregistrement(EnregistrementPhysique *enregistrement, const char *buffer);
-void ecrireEnregistrement(char *buffer, size_t size, EnregistrementPhysique *enregistrement);
+bool ecrireEnregistrement(char *buffer, size_t size, EnregistrementPhysique *enregistrement);
 bool enregistrementValide(const EnregistrementPhysique *enregistrement);
 void RenameFichier(const char* name,const char* Newname,Virtualdisk *ms);
 // Fonctions de gestion des buffers

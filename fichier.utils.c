@@ -138,21 +138,21 @@ void afficherFichier(Fichier *fichier) {
         printf("afficherFichier: fichier est NULL\n");
         return;
     }
-    BufferTransmission*Buffer =NULL;
+    BufferTransmission*Buffer = calloc(1,sizeof(BufferTransmission));
     char buffer[256];
     printf("Fichier contient %d enregistrements:\n", fichier->entete.nbEnregistrements);
 
     if (fichier->mode == Contigue) {
         for (int i = 0; i < fichier->nbBlocs; i++) {
-
-            afficherBloc(Buffer,fichier->blocs[i]);
+            printf("Bloc %d:\n", i);
+            afficherBloc(Buffer,&fichier->blocs[i]);
         }
     } else if (fichier->mode == Chainee) {
         Bloc *current = fichier->blocs;
         int index = 0;
         while (current) {
             printf("Bloc %d:\n", index++);
-            afficherBloc(Buffer,*current);
+            afficherBloc(Buffer,current);
             current = current->next;
         }
     }

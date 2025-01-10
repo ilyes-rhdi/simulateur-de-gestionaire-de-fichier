@@ -136,6 +136,7 @@ int main() {
                     break;
                 }
                 afficherFichier(fichierCourant);
+
                 break;
             }
 

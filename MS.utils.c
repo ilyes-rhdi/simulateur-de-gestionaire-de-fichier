@@ -231,13 +231,21 @@ bool libererBloc(Fichier* fichier, Bloc* blocDirect,Virtualdisk *ms) {
     return false;
 }
 
-void LireBloc(BufferTransmission *Buffer,Bloc *bloc){
-    if (bloc==NULL)
-    {
-        printf("bloc vide");
-        return;
+bool LireBloc(BufferTransmission *Buffer, Bloc *bloc) {
+    if (bloc == NULL) {
+        printf("Erreur : Bloc vide.\n");
+        return false;
     }
-    remplirBuffer(Buffer,bloc);
+    // Appeler remplirBuffer pour copier les données
+    remplirBuffer(Buffer, bloc);
+
+    // Si remplirBuffer a une logique d'échec, on peut gérer ici.
+    if (Buffer->B == NULL) {
+        printf("Erreur : Impossible de remplir le buffer.\n");
+        return false;
+    }
+
+    return true;
 }
 void EcrireBloc(BufferTransmission*Buffer,Bloc * bloc){
     if (!bloc || !Buffer)
@@ -245,37 +253,49 @@ void EcrireBloc(BufferTransmission*Buffer,Bloc * bloc){
         printf("bloc ou buffer vide");
         return;
     }
-    *bloc=Buffer->B ;
+    bloc=Buffer->B ;
     viderBuffer(Buffer);
     
 }
-void afficherBloc(BufferTransmission *Buffer, Bloc bloc) {
-    if (&bloc == NULL ) {
-        printf("bloc vide\n");
+void afficherBloc(BufferTransmission *Buffer, Bloc *bloc) {
+    if (bloc == NULL || Buffer == NULL) {
+        printf("Erreur : Bloc non valide.\n");
         return;
     }
 
     // Lire le bloc dans le buffer
-    LireBloc(Buffer, &bloc);
-    
-    // Buffer temporaire pour chaque enregistrement
-    char bufferTemp[256];  // Définir TAILLE_MAX_BUFFER selon vos besoins
-    EnregistrementPhysique enr;
-    
-    // Parcourir les enregistrements du bloc à partir du buffer
-    for (int i = 0; i < Buffer->B.taille; i++) {
-        enr=Buffer->B.enregistrements[i];
-        // à partir du bloc dans le buffer
-        if (lireEnregistrement(&enr,bufferTemp)) {
-            printf("\nEnregistrement %d:\n", i + 1);
-            printf("ID: %d\n", enr.entete.id);
-            printf("Data1: %s\n", enr.data1);
-            printf("Data2: %s\n", enr.data2);
-            printf("Data3: %s\n", enr.data3);
-        }
+    if (!LireBloc(Buffer, bloc)) {
+        printf("Erreur : Échec de la lecture du bloc.\n");
+        return;
     }
-    
+
+    if (Buffer->B == NULL) {
+        printf("Erreur : Données du bloc non disponibles dans le buffer.\n");
+        return;
+    }
+
     // Afficher les métadonnées du bloc
     printf("\nInformations du bloc:\n");
-    printf("Nombre d'enregistrements: %d\n", Buffer->B.taille);
+    printf("Numéro du bloc: %d\n", Buffer->B->numBloc);
+    printf("Nombre d'enregistrements: %d\n", Buffer->B->taille);
+    printf("Est complet: %s\n", Buffer->B->estComplet ? "Oui" : "Non");
+
+    // Parcourir et afficher les enregistrements du bloc
+    printf("\nDétails des enregistrements :\n");
+    const int TAILLE_MAX_BUFFER = 256;
+    char bufferTemp[TAILLE_MAX_BUFFER];
+
+    for (int i = 0; i < Buffer->B->taille; i++) {
+        EnregistrementPhysique *enr = &Buffer->B->enregistrements[i];
+
+        if (ecrireEnregistrement(bufferTemp,TAILLE_MAX_BUFFER,enr)) {
+            printf("\nEnregistrement %d:\n", i + 1);
+            printf("ID: %d\n", enr->entete.id);
+            printf("Data1: %s\n", enr->data1);
+            printf("Data2: %s\n", enr->data2);
+            printf("Data3: %s\n", enr->data3);
+        } else {
+            printf("Erreur : Impossible de lire l'enregistrement %d.\n", i + 1);
+        }
+    }
 }
