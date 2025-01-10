@@ -42,13 +42,14 @@ Utilisez la commande suivante pour compiler le programme :
 
 ```bash
 gcc -o programme interface.console.c hashage.utils.c MS.utils.c fichier.utils.c Enregistrement.utils.c Buffer.utils.c
-
+```
 
 ### Exécution
 
 Lancez le programme à l'aide de la commande suivante :
 ```bash
 ./programme
+```
 
 ## Navigation dans le Menu
 
