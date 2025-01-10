@@ -9,20 +9,27 @@ void remplirBuffer(BufferTransmission *buffer,Bloc *bloc)
     if (buffer == NULL || bloc == NULL)
         return;
     // copy data to the buffer, leaving space for the null terminator
-
     buffer->taille=bloc->taille;
     // Copier les champs simples directement
     buffer->B.taille = bloc->taille;
     buffer->B.numBloc = bloc->numBloc;
     buffer->B.estComplet = bloc->estComplet;
-
+    char buff[256];
     // Gérer le champ `enregistrements` (copie profonde si nécessaire)
     if (bloc->enregistrements != NULL) {
         // Allouer de la mémoire pour `enregistrements`
         buffer->B.enregistrements = malloc(bloc->taille * sizeof(EnregistrementPhysique));
         if (buffer->B.enregistrements != NULL) {
             // Copier les données de `enregistrements`
-            memcpy(buffer->B.enregistrements, bloc->enregistrements, bloc->taille * sizeof(EnregistrementPhysique));
+            for (int i = 0; i < bloc->taille; i++)
+            {
+                if (lireEnregistrement(&bloc->enregistrements[i],buff))
+                {
+                    ecrireEnregistrement(buff,256,&buffer->B.enregistrements[i]);
+                }
+                
+            }
+            
         } else {
             // Si l'allocation échoue, on peut choisir de retourner ou de continuer sans copier
             buffer->B.enregistrements = NULL;

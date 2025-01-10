@@ -4,15 +4,19 @@ void afficherMenu() {
     printf("\n=== Gestionnaire de Fichiers ===\n");
     printf("1. Initialiser le disque virtuel\n");
     printf("2. Créer un fichier\n");
-    printf("3. Ajouter un enregistrement\n"); 
+    printf("3. Ajouter un enregistrement\n");
     printf("4. Supprimer un enregistrement\n");
     printf("5. Rechercher un enregistrement\n");
     printf("6. Afficher un fichier\n");
     printf("7. Compactage\n");
     printf("8. Défragmentation\n");
-    printf("9. Quitter\n");
+    printf("9. Ouvrir un fichier\n");
+    printf("10. Fermer un fichier\n");
+    printf("11. Renommer un fichier\n");
+    printf("12. Quitter\n");
     printf("Choix : ");
 }
+
 
 EnregistrementPhysique creerEnregistrement() {
     EnregistrementPhysique enr;
@@ -31,7 +35,7 @@ int main() {
     BufferTransmission buffer = {0};
     int choix;
 
-    while (true) {
+    do {
         afficherMenu();
         scanf("%d", &choix);
 
@@ -112,8 +116,10 @@ int main() {
                 char* Section;
                 printf("ID à rechercher: ");
                 scanf("%d", &id);
-                printf("Nom et  Section de la personne a chercher : ");
-                scanf("%s%s", &name,&Section);
+                printf("Nom de la personne a chercher : ");
+                scanf("%s", &name);
+                printf("Section de la personne a chercher : ");
+                scanf("%s",&Section);
 
                 EnregistrementPhysique* enr = rechercherEnregistrement(fichierCourant, id, name, Section);
                 if (enr) {
@@ -159,13 +165,56 @@ int main() {
                 break;
             }
 
-            case 9:
-                if (ms) VidezMS(ms);
-                if (fichierCourant) libererFichier(fichierCourant);
-                return 0;
+            case 9: // Ouvrir un fichier
+                if (ms) {
+                    char nom[30];
+                    printf("Nom du fichier à ouvrir : ");
+                    scanf("%s", nom);
+                    fichierCourant = ouvrirFichier(nom, ms);
+                    if (fichierCourant) {
+                        printf("Fichier '%s' ouvert avec succès.\n", nom);
+                    }
+                } else {
+                    printf("Initialisez d'abord le disque virtuel.\n");
+                }
+                break;
+
+            case 10: // Fermer un fichier
+                if (fichierCourant) {
+                    if (fermerFichier(fichierCourant, ms)) {
+                        printf("Fichier '%s' fermé avec succès.\n", fichierCourant->nomFichier);
+                        free(fichierCourant); // Libérer la mémoire allouée
+                        fichierCourant = NULL;
+                    } else {
+                        printf("Erreur lors de la fermeture du fichier.\n");
+                    }
+                } else {
+                    printf("Aucun fichier n'est actuellement ouvert.\n");
+                }
+                break;
+
+            case 11: // Renommer un fichier
+                if (ms) {
+                    char nom[30], nouveauNom[30];
+                    printf("Nom du fichier à renommer : ");
+                    scanf("%s", nom);
+                    printf("Nouveau nom : ");
+                    scanf("%s", nouveauNom);
+                    RenameFichier(nom, nouveauNom, ms);
+                    printf("Le fichier '%s' a été renommé en '%s'.\n", nom, nouveauNom);
+                } else {
+                    printf("Initialisez d'abord le disque virtuel.\n");
+                }
+                break;
+
+            case 12: // Quitter
+                printf("Fermeture du programme.\n");
+                break;
 
             default:
-                printf("Choix invalide. Réessayez.\n");
+                printf("Choix invalide.\n");
         }
-    }
+    } while (choix != 12);
+
+    return 0;
 }
