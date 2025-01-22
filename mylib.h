@@ -99,7 +99,7 @@ void ModifierTableAllocation(Virtualdisk* ms, int indexBloc);
 void RecupererInfoFichier(Virtualdisk *ms, const char* nom, Fichier* fichier);
 void LireBlocDepuisMS(Virtualdisk *ms, int numBloc, Bloc *bloc);
 bool fichierExisteDansMS(Virtualdisk *ms, const char* nom);
-Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms, char *nom, ModeOrganisationF sort, ModeOrganisationE mode);
+Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms,const char  *nom, ModeOrganisationF sort, ModeOrganisationE mode);
 void libererFichier(Fichier *fichier);
 void AjouterBloc(Virtualdisk* ms,Fichier *Fichier);
 Bloc* trouverBlocAvecEspace(Fichier* fichier);

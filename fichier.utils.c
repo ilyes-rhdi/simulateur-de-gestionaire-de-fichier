@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 // Initialisation du fichierTOV
-Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms, char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
+Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms,const char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
     Fichier *fichier = malloc(sizeof(Fichier));
     if (fichier == NULL) {
         fprintf(stderr, "Erreur : Allocation mémoire échouée pour le fichier.\n");
