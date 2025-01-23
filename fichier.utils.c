@@ -3,7 +3,49 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include <unistd.h>
+#include <unistd.h> 
+void enregistrerFichier(int capaciteMax,Virtualdisk *ms,const char *nom, ModeOrganisationF sort, ModeOrganisationE mode){
+    FILE *Fich;
+    char chemin_initial[256];
+    getcwd(chemin_initial, sizeof(chemin_initial));
+    
+    // Changer le répertoire courant vers "ms"
+    if (chdir("MS") != 0) {
+        perror("Impossible de changer de répertoire");
+        return NULL;
+    }else{
+        FILE *fichier = fopen(nom, "r");
+
+        if (fichier) {
+            printf("Le fichier '%s' existe déjà.\n", nom);
+            Fichier *f = initialiserFichier(capaciteMax,ms,nom,sort,mode);
+            bool swapp=true;
+            char buf[256];
+            EnregistrementPhysique  enr;
+            strcpy(enr.data1, "");
+            strcpy(enr.data2, "");
+            strcpy(enr.data3, "");
+            while (swapp)
+            {
+                fscanf(fichier,buf);
+                if (!lireEnregistrement(&enr,buf))
+                {
+                    swapp=false;
+                }  
+            }
+
+            fclose(fichier); // Toujours fermer le fichier après ouverture
+        } else {
+        // Créer et ouvrir le fichier (dans "ms" car le répertoire courant a changé)
+        Fich = fopen(nom, "w");
+        if (Fich == NULL) {
+            perror("Erreur lors de la création du fichier");
+            return NULL;
+        }
+        chdir(chemin_initial);
+        }
+    }
+}
 
 // Initialisation du fichierTOV
 Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms,const char *nom, ModeOrganisationF sort, ModeOrganisationE mode) {
@@ -95,6 +137,7 @@ Fichier *initialiserFichier(int capaciteMax,Virtualdisk *ms,const char *nom, Mod
     ms->table_fichiers[i].entete.capaciteMax = capaciteMax * MAX_ENREGISTREMENTS_PAR_BLOC;
     ms->table_fichiers[i].entete.nextID = 0;
     ms->table_fichiers[i].blocs=NULL;
+
     return fichier;
 }
 

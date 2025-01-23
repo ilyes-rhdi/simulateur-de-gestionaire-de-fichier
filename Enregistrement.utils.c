@@ -6,6 +6,7 @@ bool ajouterEnregistrement(Virtualdisk* ms, Fichier* fichier, EnregistrementPhys
         return false;
     }
 
+
     enregistrement->entete.id = fichier->entete.nextID++;
     enregistrement->entete.suppprimer = false;
 
@@ -30,7 +31,29 @@ bool ajouterEnregistrement(Virtualdisk* ms, Fichier* fichier, EnregistrementPhys
         qsort(blocActuel->enregistrements, blocActuel->taille, 
               sizeof(EnregistrementPhysique), comparerEnregistrements);
     }
-    
+    char chemin_initial[256];
+    getcwd(chemin_initial, sizeof(chemin_initial));
+    char buf[256];
+    if (chdir("MS") != 0) {
+        perror("Impossible de changer de répertoire");
+        return false;
+    }else{
+        // Créer et ouvrir le fichier (dans "ms" car le répertoire courant a changé)
+        FILE *Fichier = fopen(fichier->nomFichier, "w");
+        if (Fichier == NULL) {
+            perror("Erreur lors de la création du fichier");
+            return false;
+        }
+        if (ecrireEnregistrement(buf,256,enregistrement))
+        {
+            fprintf(Fichier,buf);
+        }else{
+            printf("err a l'ecriture dans la ms");
+            return false;
+        }
+        chdir(chemin_initial);
+    }
+
     return true;
 }
 

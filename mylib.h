@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 
 #define TAILLE_MAX_ENREGISTREMENT 256
 #define TAILLE_BUFFER 768

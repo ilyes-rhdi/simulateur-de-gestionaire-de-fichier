@@ -1,5 +1,60 @@
 #include "mylib.h"
-
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
+void EnregistrerMS(int nbloc){
+    const char *repertoire = "MS";
+    // Créer le répertoire "ms"
+    if (mkdir(repertoire) == 0) {
+        printf("Le répertoire '%s' a été créé avec succès.\n", repertoire);
+        Virtualdisk * I=InitialiseMs(nbloc);
+        FILE *Fichier;
+        char chemin_initial[256];
+        getcwd(chemin_initial, sizeof(chemin_initial));
+    
+        // Changer le répertoire courant vers "ms"
+        if (chdir("MS") != 0) {
+            perror("Impossible de changer de répertoire");
+            return NULL;
+        }else{
+        // Créer et ouvrir le fichier (dans "ms" car le répertoire courant a changé)
+        Fichier = fopen("taille_ms", "w");
+        if (Fichier == NULL) {
+            perror("Erreur lors de la création du fichier");
+            return NULL;
+        }
+        fprintf(Fichier,(char)I->nb_blocs);
+        chdir(chemin_initial);
+    }
+    } else if (errno == EEXIST) {
+        FILE *Fichier;
+        char chemin_initial[256];
+        getcwd(chemin_initial, sizeof(chemin_initial));
+        char buff[1000];
+    
+        // Changer le répertoire courant vers "ms"
+        if (chdir("MS") != 0) {
+            perror("Impossible de changer de répertoire");
+            return NULL;
+        }else{
+        // Créer et ouvrir le fichier (dans "ms" car le répertoire courant a changé)
+        Fichier = fopen("taille_ms", "w");
+        if (Fichier == NULL) {
+            perror("Erreur lors de la création du fichier");
+            return NULL;
+        }
+        fscanf(Fichier,buff);
+        chdir(chemin_initial);
+    }
+        int nblocs=(int)buff; 
+        printf("Le répertoire '%s' existe déjà(memoir secondaire deja initialiser avec %d bloc ).\n", repertoire,nblocs);
+        Virtualdisk * I=InitialiseMs(nblocs);
+    } else {
+        perror("Erreur lors de la création du répertoire");
+        return NULL;
+    }
+    
+}
 Virtualdisk* InitialiseMs(int nbloc) {
     // Allouer la mémoire pour la ms
     Virtualdisk* I = malloc(sizeof(Virtualdisk));
@@ -58,7 +113,8 @@ Virtualdisk* InitialiseMs(int nbloc) {
     // Le premier bloc devient la tête de la liste chaînée
     I->bloc = newBloc;
 
-    return I;
+     return I;
+   
 }
 
 void VidezMS(Virtualdisk* ms) {
